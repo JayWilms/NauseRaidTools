@@ -1,7 +1,7 @@
 local _, A = ...
 NauseRaidTools = A
 A.displayName = "Nause Raid Tools"
-A.version = "0.12.0-alpha.80"
+A.version = "0.12.0-alpha.81"
 A.protocol = 19
 A.confirmationDialogs = {}
 A.responses = {"BIS", "Upgrade", "Minor Upgrade", "Off-Spec", "PvP", "Pass"}

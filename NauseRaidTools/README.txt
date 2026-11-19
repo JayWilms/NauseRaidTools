@@ -1,4 +1,4 @@
-Nause Raid Tools 0.12.0-alpha.80 - private testing build
+Nause Raid Tools 0.12.0-alpha.81 - private testing build
 
 INSTALL
 Exit WoW. Remove the old SanguineLootTools or SanguineLootCouncil folder.
@@ -539,3 +539,11 @@ It uses the existing /nrt test flow: solo outside groups and shared group testin
 when grouped. When Nause Soft Reserve is enabled, the matching Start / End
 SoftRes test button appears beneath it. Live sessions and the other test mode
 block starting a test; normal raid permissions are unchanged.
+
+ALPHA.81 UPDATE
+Test Modes now appears at the top of Settings > Advanced. SoftRes Test chooses
+solo or shared party/raid testing automatically, using the same button or
+/nrt softres test. The leader starts the shared test; group members submit their
+own reservations and roll on simulated items. Update all participating clients.
+Awards and delivery are simulated; saved SR sessions and history are untouched.
+See NauseSoftReserve/README.txt for joining, leaving and reset behavior.

@@ -63,7 +63,7 @@ check(s.test and #s.session.history==0,"restart retained test awards")
 e.IsInGroup=function() return true end
 s.events:GetScript("OnEvent")(s.events,"GROUP_ROSTER_UPDATE")
 check(not s.test and not s.session and not a.demo,"joining a group left test context active")
-check(not s:StartTest(),"solo test began in a real group")
+check(not a:IsSoloTest(),"group join retained solo transport isolation")
 e.IsInGroup=function() return false end
 s.session={id="real-run"}
 check(not s:StartTest() and s.session.id=="real-run","test replaced a live SR session")

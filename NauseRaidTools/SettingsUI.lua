@@ -494,25 +494,25 @@ function A:BuildSettingsUI(u,window,text,button,edit)
     position(u.profileList,profiles,0,305,function(w) return w end,110)
     description(profiles,"Apply a profile before starting, or update an unlocked session as Raid Leader. Personal colours and recorded loot stay separate.",450);profiles:SetHeight(530)
     local advanced=u.settingsPages.Advanced.content
-    section(advanced,"Session Recovery",0)
-    description(advanced,"Use these controls to recover session data or manage a voting interruption.",30)
-    u.settingsResync=button(advanced,"Resynchronise",0,-92,180,function() A:RequestSync() end)
-    position(u.resetVoting,advanced,0,155,180,30);position(u.openVoting,advanced,195,155,180,30)
-    description(advanced,"Voting recovery affects the selected item. Review its state in Voting first.",205)
-    section(advanced,"Addon Versions",290)
-    u.settingsVersions=button(advanced,"Version Check",0,-338,180,function() A:StartVersionCheck(true) end)
-    description(advanced,"View your installed versions, or compare party and raid members. Available to everyone.",382)
-    section(advanced,"Diagnostics",460)
-    u.settingsDiagnostics=button(advanced,"Open diagnostics",0,-510,180,function() A:ShowDiagnostics() end)
-    description(advanced,"View the local diagnostic report. Recording remains opt-in; nothing is uploaded automatically.",555);advanced:SetHeight(635)
-    section(advanced,"Test Modes",635)
+    section(advanced,"Test Modes",0)
     u.addTestModeButton=function(title,help,y,action)
         local control=button(advanced,"",0,0,210,action)
         row(advanced,title,help,y,control,210)
         advanced:SetHeight(math.max(advanced:GetHeight(),y+85));u.settingsLayoutKey=nil
         return control
     end
-    u.lootCouncilTest=u.addTestModeButton("Loot Council Test","Uses the existing council simulation: solo outside a group, shared testing with a group.",675,function() A:ToggleCouncilTest() end)
+    u.lootCouncilTest=u.addTestModeButton("Loot Council Test","Uses the existing council simulation: solo outside a group, shared testing with a group.",40,function() A:ToggleCouncilTest() end)
+    section(advanced,"Session Recovery",225)
+    description(advanced,"Use these controls to recover session data or manage a voting interruption.",255)
+    u.settingsResync=button(advanced,"Resynchronise",0,-317,180,function() A:RequestSync() end)
+    position(u.resetVoting,advanced,0,380,180,30);position(u.openVoting,advanced,195,380,180,30)
+    description(advanced,"Voting recovery affects the selected item. Review its state in Voting first.",430)
+    section(advanced,"Addon Versions",515)
+    u.settingsVersions=button(advanced,"Version Check",0,-563,180,function() A:StartVersionCheck(true) end)
+    description(advanced,"View your installed versions, or compare party and raid members. Available to everyone.",607)
+    section(advanced,"Diagnostics",685)
+    u.settingsDiagnostics=button(advanced,"Open diagnostics",0,-735,180,function() A:ShowDiagnostics() end)
+    description(advanced,"View the local diagnostic report. Recording remains opt-in; nothing is uploaded automatically.",780);advanced:SetHeight(860)
     -- Keep operational item utilities with Loot; the launcher owns window navigation.
     u.itemTools=window("NauseRaidToolsItemTools","Add loot",620,170,true)
     move(u.itemInput,u.itemTools,20,90,430);move(u.add,u.itemTools,465,90,130);u.itemInput.hint:Hide()
@@ -843,7 +843,7 @@ function A:RefreshTestControls()
     end
     if u.softResTest then
         u.softResTest:SetText(srTest and "End SoftRes test" or "Start SoftRes test")
-        u.softResTest:SetEnabled(srTest or (idle and not self.Client:InGroup() and not self.Client:Combat()))
+        u.softResTest:SetEnabled(srTest or (idle and not self.Client:Combat()))
     end
 end
 function A:RenderSettingsPresentation()

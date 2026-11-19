@@ -2,11 +2,11 @@
 
 Raid loot tools for WoW: Forever. Previously Sanguine Loot Tools.
 
-**Current testing build: 0.12.0-alpha.80**, protocol 19. Includes **Nause Soft Reserve 0.1.0-experimental.17**. This is an alpha pre-release; multiplayer trade and recovery checks are still in progress.
+**Current testing build: 0.12.0-alpha.81**, protocol 19. Includes **Nause Soft Reserve 0.1.0-experimental.18**. This is an alpha pre-release; multiplayer trade and recovery checks are still in progress.
 
 ## Download and install
 
-Download [the alpha.80 install ZIP](https://github.com/JayWilms/NauseRaidTools/releases/tag/v0.12.0-alpha.80), or use the [repository copy](dist/NauseRaidTools-0.12.0-alpha.80-install.zip).
+Download [the alpha.81 install ZIP](https://github.com/JayWilms/NauseRaidTools/releases/tag/v0.12.0-alpha.81), or use the [repository copy](dist/NauseRaidTools-0.12.0-alpha.81-install.zip).
 
 1. Exit World of Warcraft.
 2. Remove the old SanguineLootTools or SanguineLootCouncil addon folder, if installed.
@@ -18,11 +18,13 @@ Use the same build on everyone participating in a session. Nause uses its own sa
 
 ## Test Modes
 
-Settings > Advanced > Test Modes has matching Start/End buttons for Loot Council and SoftRes. The council button uses the existing solo or shared group simulation. The SoftRes test runs outside a group with 20 simulated players, 8 item choices and 10 loot copies, including duplicate copies, offline players and missing submissions.
+Test Modes appears at the top of Settings > Advanced with matching Start/End buttons for Loot Council and SoftRes. Both choose solo or shared group testing automatically.
 
-`/nrt softres test` (or `/nrtsr test`) starts or resets the solo SoftRes test. Lock the sample reservations, queue loot, use MS/OS to roll locally, confirm an award and simulate delivery. `/nrt leave-test` or `/nrt softres leave-test` exits. Joining a real group automatically ends the SoftRes test.
+Outside a group, SoftRes provides 20 simulated players, 8 item choices and 10 loot copies. Sample players roll automatically. In a party or raid, the leader starts the test and actual group members submit reservations and use MS/OS for native rolls. All participants need this build. Use `/nrt softres test` or `/nrtsr test` to start; members can also use it to request to join.
 
-Test titles are labelled. Real bags, trades, chat announcements, addon snapshots and saved SR history/session data are isolated. A live session or the other test mode blocks starting a test. Simulations do not verify real multiplayer communication or delivery.
+Lock reservations, queue loot, confirm an award and simulate delivery. `/nrt leave-test` exits locally; the leader ending the test stops it for everyone. Re-running the command as leader resets it. Disbanding or changing leaders ends a shared test. Joining a group ends a solo test.
+
+Test windows are labelled. Real bags, trades and saved SR sessions/history are untouched. Shared tests use separate test messages, so older clients cannot mistake them for live sessions. Live sessions and the other test mode block starting a test. Automated checks do not replace native multiplayer testing.
 
 ## Version Check
 

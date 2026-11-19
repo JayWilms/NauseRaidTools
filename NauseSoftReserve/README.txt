@@ -1,4 +1,4 @@
-Nause Soft Reserve - 0.1.0-experimental.17
+Nause Soft Reserve - 0.1.0-experimental.18
 
 Requires NauseRaidTools. Install the NauseRaidTools and NauseSoftReserve folders
 alongside each other inside Interface/AddOns. Everyone using the SR interface
@@ -65,3 +65,19 @@ network snapshots and saved SR sessions/history are not used or changed.
 /nrt softres leave-test, /nrtsr leave-test or /nrt leave-test exits.
 Re-running the start command resets the test. Joining a real group ends it.
 This UI simulation does not verify real multiplayer synchronisation or trades.
+
+SHARED SOFTRES TEST (included in alpha.81)
+The same Start SoftRes test button and /nrt softres test command now work in
+parties and raids. The group leader starts the test. Members with this update
+join when the test arrives; clicking Start SoftRes test also requests to join.
+Group tests use actual group members, 8 sample item choices and 10 simulated
+loot copies. Submit reservations, lock, queue loot, then use MS / OS for real
+/roll results. There are no simulated player rolls in shared tests.
+Awards and delivery remain simulated. Real bags, trades and saved SR sessions
+or history are untouched. Separate test messages keep older clients from
+mistaking the test for a live run; update every participating player together.
+A member's End test button leaves locally; Start rejoins. The leader's End test
+stops it for everyone. Re-running the start command as leader resets the test.
+Leaving the group or changing leaders ends the shared test. Solo testing still
+works outside a group. Test Modes is now the first section in Advanced.
+Automated party/raid simulations passed; native group testing remains required.
