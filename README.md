@@ -2,11 +2,11 @@
 
 Raid loot tools for WoW: Forever. Previously Sanguine Loot Tools.
 
-**Current testing build: 0.12.0-alpha.78**, protocol 19. Includes **Nause Soft Reserve 0.1.0-experimental.16**. This is an alpha pre-release; multiplayer trade and recovery checks are still in progress.
+**Current testing build: 0.12.0-alpha.79**, protocol 19. Includes **Nause Soft Reserve 0.1.0-experimental.16**. This is an alpha pre-release; multiplayer trade and recovery checks are still in progress.
 
 ## Download and install
 
-Download [the alpha.78 install ZIP](https://github.com/JayWilms/NauseRaidTools/releases/tag/v0.12.0-alpha.78), or use the [repository copy](dist/NauseRaidTools-0.12.0-alpha.78-install.zip).
+Download [the alpha.79 install ZIP](https://github.com/JayWilms/NauseRaidTools/releases/tag/v0.12.0-alpha.79), or use the [repository copy](dist/NauseRaidTools-0.12.0-alpha.79-install.zip).
 
 1. Exit World of Warcraft.
 2. Remove the old SanguineLootTools or SanguineLootCouncil addon folder, if installed.
@@ -15,6 +15,12 @@ Download [the alpha.78 install ZIP](https://github.com/JayWilms/NauseRaidTools/r
 5. For SoftRes item browsing, enable AtlasLoot Forever and its Dungeons and Raids module, or a compatible ItemDB. These separate addons are not bundled.
 
 Use the same build on everyone participating in a session. Nause uses its own saved data; old Sanguine settings are not migrated.
+
+## Version Check
+
+Open Settings > Advanced > Version Check or `/nrt versions`. This is available to every role without an active loot session. Outside a group it shows only your installed NRT and SoftRes versions and sends no requests. In a party or raid it can compare members' installed versions. It does not query guild members or check GitHub for updates. No reply is unconfirmed, not proof the addon is missing.
+
+Detailed Pre-Raid Loot Check remains restricted to the Raid Leader and Master Looter. `/nrt check` opens the independent Version Check for other players.
 
 ## Loot council
 
@@ -37,7 +43,7 @@ The updated UI shares Overview, Reservations, Rolls and Awards navigation. Overv
 
 ## Testing status
 
-All 27 automated suites passed. The finished ZIP also passed extraction, addon manifest, slash command and SoftRes integration checks. Simulations include multiplayer synchronisation and delivery scenarios; they do not establish live game reliability.
+All 28 automated suites passed. The finished ZIP also passed extraction, addon manifest, slash command and SoftRes integration checks. Simulations include multiplayer synchronisation and delivery scenarios; they do not establish live game reliability.
 
 The tester confirmed the basic reserve, roll, winner confirmation and reserve-consumption flow in game on alpha.77. Alpha.78 UI spacing, real trades, multiplayer reconnects and council recovery still need in-game review. See [TESTING.md](TESTING.md).
 

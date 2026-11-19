@@ -1,9 +1,9 @@
-# Alpha.78 testing checklist
+# Alpha.79 testing checklist
 
 ## Verified automatically
 
-- All 27 suites passed against the current source.
-- Final ZIP verified: 72 files, two matching addon folders/TOCs and protocol 19.
+- All 28 suites passed against the current source.
+- Final ZIP verified: 73 files, two matching addon folders/TOCs and protocol 19.
 - Extracted ZIP passed initialization, solo/group council test commands and all SoftRes suites.
 - SoftRes integration includes a 20-player overview, offline/missing filters, native item-loading refresh, dropdown selection, reserve caps, draft retention, staged award controls and separate item copies.
 
@@ -13,7 +13,7 @@
 - Valid rolls appear with SR priority and the expected winner.
 - Winner confirmation records an award and consumes one reservation.
 
-## Alpha.78 visual review
+## Alpha.79 visual review
 
 - [ ] Review Overview, Reservations, Rolls and Awards at normal UI scale.
 - [ ] Check long player/item/content names, six slots, tooltips and scrollbar reach.
@@ -34,3 +34,13 @@
 - [ ] Verify installed AtlasLoot Forever source coverage for intended raid content.
 
 Historical detailed council tests remain in [docs/TESTING-alpha70.md](docs/TESTING-alpha70.md). They refer to the old Sanguine name and `/slt`; current commands use `/nrt`.
+
+## Alpha.79 version check
+
+- [ ] Open Settings > Advanced > Version Check as an ordinary raider and while solo.
+- [ ] Outside a group, check that only the current character's installed addon versions appear.
+- [ ] In a party or raid, compare NRT and SoftRes versions across current group members.
+- [ ] Check mismatched versions, SoftRes disabled, offline peers and no reply.
+- [ ] Verify guild members are not queried and raid management permissions stay unchanged.
+
+Automated version tests cover these scopes, request throttling, stale and outsider replies, and separation from session authority. Everyone must update to alpha.79 to answer the new independent version query.

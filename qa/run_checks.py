@@ -32,6 +32,7 @@ checks = [
     'check_slash_commands.py',
     'check_manual_loot_links.py',
     'check_softres.py',
+    'check_versions.py',
 ]
 for name in checks:
     result = subprocess.run([sys.executable, str(root / 'qa' / name)], cwd=root, capture_output=True, text=True)

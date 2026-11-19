@@ -1,4 +1,4 @@
-Nause Raid Tools 0.12.0-alpha.78 - private testing build
+Nause Raid Tools 0.12.0-alpha.79 - private testing build
 
 INSTALL
 Exit WoW. Remove the old SanguineLootTools or SanguineLootCouncil folder.
@@ -10,6 +10,13 @@ Enable Nause Raid Tools at character selection. Commands start with /nrt.
 This rebrand uses a fresh NauseRaidToolsDB for settings and history.
 Run /nrt test solo or as group leader to start simulated loot.
 Use /nrt leave-test to exit. Use /nrt help for the command list.
+
+NEW IN ALPHA.79
+- Settings > Advanced > Version Check is available at every raid rank.
+- /nrt versions opens the same independent version window.
+- Outside a group, only installed NRT and SoftRes versions are shown.
+- Party and raid members can compare both addon versions without a loot session.
+- No guild requests or extra launcher button. Pre-Raid Loot Check stays restricted.
 
 NEW IN ALPHA.78
 - SoftRes shares Overview, Reservations, Rolls and Awards navigation.
@@ -506,3 +513,13 @@ COMMANDS
 /nrt check; /nrt sync; /nrt test; /nrt leave-test; /nrt resume; /nrt help
 /nrt diagnostics; /nrt diagnostics start; /nrt diagnostics stop
 See LICENSE.txt for private testing terms.
+
+VERSION CHECK (included in alpha.79)
+Open Settings > Advanced > Version Check, or /nrt versions, at any rank.
+Outside a group it shows only your installed NRT and SoftRes versions, without
+sending any requests. In a party or raid it compares group members. There is
+no guild check and no extra launcher button.
+A missing reply is unconfirmed, not proof an addon is absent. This checks
+installed versions, not GitHub releases. Detailed Pre-Raid Loot Check remains
+restricted to the raid leader and Master Looter; /nrt check opens Version Check
+for other players.

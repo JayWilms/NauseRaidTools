@@ -5,7 +5,7 @@ local function move(object,parent,x,y,width,height)
     if height then object:SetHeight(height) end
 end
 local pageOrder={"Session","Loot Configuration","Responses","Council","Alerts","Announcements","Display","Profiles","Advanced"}
-local pageDescriptions={["Loot Configuration"]="Choose what is collected, who receives automatic assignments and why.",Session="Manage this raid and its pre-raid checks.",Responses="Configure raid choices and personalise your colours.",Council="Assign loot authority and set council voting rules.",Alerts="Control trade-expiry warnings and sounds.",Announcements="Choose which loot events appear in Raid chat.",Display="Personal window layout and opening preferences.",Profiles="Reuse your raid configuration.",Advanced="Recovery and diagnostics for when you need them."}
+local pageDescriptions={["Loot Configuration"]="Choose what is collected, who receives automatic assignments and why.",Session="Manage this raid and its pre-raid checks.",Responses="Configure raid choices and personalise your colours.",Council="Assign loot authority and set council voting rules.",Alerts="Control trade-expiry warnings and sounds.",Announcements="Choose which loot events appear in Raid chat.",Display="Personal window layout and opening preferences.",Profiles="Reuse your raid configuration.",Advanced="Check addon versions, session recovery and diagnostics."}
 local togglePath="Interface\\AddOns\\NauseRaidTools\\Assets\\"
 local function switch(control)
     control:SetSize(76,26);control:SetBackdrop(nil)
@@ -499,9 +499,12 @@ function A:BuildSettingsUI(u,window,text,button,edit)
     u.settingsResync=button(advanced,"Resynchronise",0,-92,180,function() A:RequestSync() end)
     position(u.resetVoting,advanced,0,155,180,30);position(u.openVoting,advanced,195,155,180,30)
     description(advanced,"Voting recovery affects the selected item. Review its state in Voting first.",205)
-    section(advanced,"Diagnostics",290)
-    u.settingsDiagnostics=button(advanced,"Open diagnostics",0,-340,180,function() A:ShowDiagnostics() end)
-    description(advanced,"View the local diagnostic report. Recording remains opt-in; nothing is uploaded automatically.",390);advanced:SetHeight(480)
+    section(advanced,"Addon Versions",290)
+    u.settingsVersions=button(advanced,"Version Check",0,-338,180,function() A:StartVersionCheck(true) end)
+    description(advanced,"View your installed versions, or compare party and raid members. Available to everyone.",382)
+    section(advanced,"Diagnostics",460)
+    u.settingsDiagnostics=button(advanced,"Open diagnostics",0,-510,180,function() A:ShowDiagnostics() end)
+    description(advanced,"View the local diagnostic report. Recording remains opt-in; nothing is uploaded automatically.",555);advanced:SetHeight(635)
     -- Keep operational item utilities with Loot; the launcher owns window navigation.
     u.itemTools=window("NauseRaidToolsItemTools","Add loot",620,170,true)
     move(u.itemInput,u.itemTools,20,90,430);move(u.add,u.itemTools,465,90,130);u.itemInput.hint:Hide()

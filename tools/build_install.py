@@ -15,7 +15,7 @@ protocol = int(re.search(r'^A\.protocol = (\d+)$', core, re.M).group(1))
 assert core.count('self.state.responseDuration=60') == 2
 addons = [source, root / 'NauseSoftReserve']
 files = sorted(p for addon in addons for p in addon.rglob('*') if p.is_file())
-assert len([p for p in source.rglob('*') if p.is_file()]) == 40
+assert len([p for p in source.rglob('*') if p.is_file()]) == 41
 assert all((addon / (addon.name + '.toc')).is_file() for addon in addons)
 output = root / 'outputs' / f'NauseRaidTools-{version}-install.zip'
 staged = root / 'work' / f'NauseRaidTools-{version}-verified.zip'

@@ -762,6 +762,7 @@ function A:BuildUI()
     self:BuildDiagnosticUI(u,window,text,button)
     self:BuildAuditUI(u,window,text)
     self:BuildHistoryExportUI(u,window,text,button)
+    if self.BuildVersionCheckUI then self:BuildVersionCheckUI(u,window,text,button) end
     u.launcher=window("NauseRaidToolsLauncher","Nause Raid Tools",320,205)
     u.launcherButtons={}
     for i,name in ipairs({"Responses","Voting","Loot","Timer","History","Settings"}) do
@@ -1265,9 +1266,10 @@ SlashCmdList["NAUSERAIDTOOLS"] = function(input)
     elseif command == "timer" then A:ShowLootTimers()
     elseif command == "sync" then A:RequestSync()
     elseif command == "takeover" then A:TakeOverSession()
-    elseif command == "check" then A:StartAddonCheck(true)
+    elseif command == "versions" or command == "version" then A:StartVersionCheck(true)
+    elseif command == "check" then if A:IsLootController() then A:StartAddonCheck(true) else A:StartVersionCheck(true) end
     elseif command == "resume" then A:Render(); if A:RecoveryAvailable() then A:ShowConfirmation("NAUSERAIDTOOLS_RESUME") else A:Print("No saved session is available for this raid leader.") end
-    elseif command == "help" then A:Print("/nrt opens the window launcher; /nrt settings; /nrt responses; /nrt loot; /nrt timer (all roles); /nrt test; /nrt leave-test; /nrt history; /nrt sync; /nrt check; /nrt resume; /nrt takeover; /nrt diagnostics.")
+    elseif command == "help" then A:Print("/nrt opens the window launcher; /nrt settings; /nrt responses; /nrt loot; /nrt timer (all roles); /nrt test; /nrt leave-test; /nrt history; /nrt sync; /nrt versions (all roles); /nrt check; /nrt resume; /nrt takeover; /nrt diagnostics.")
     elseif command == "" then
         A:ShowLauncher()
     else A:Print("Unknown command. Use /nrt help; /nrt loot opens loot tracking.")
