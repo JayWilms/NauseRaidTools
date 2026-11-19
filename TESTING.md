@@ -1,9 +1,9 @@
-# Alpha.79 testing checklist
+# Alpha.80 testing checklist
 
 ## Verified automatically
 
 - All 28 suites passed against the current source.
-- Final ZIP verified: 73 files, two matching addon folders/TOCs and protocol 19.
+- Final ZIP verified: 74 files, two matching addon folders/TOCs and protocol 19.
 - Extracted ZIP passed initialization, solo/group council test commands and all SoftRes suites.
 - SoftRes integration includes a 20-player overview, offline/missing filters, native item-loading refresh, dropdown selection, reserve caps, draft retention, staged award controls and separate item copies.
 
@@ -13,7 +13,7 @@
 - Valid rolls appear with SR priority and the expected winner.
 - Winner confirmation records an award and consumes one reservation.
 
-## Alpha.79 visual review
+## Alpha.80 visual review
 
 - [ ] Review Overview, Reservations, Rolls and Awards at normal UI scale.
 - [ ] Check long player/item/content names, six slots, tooltips and scrollbar reach.
@@ -35,7 +35,7 @@
 
 Historical detailed council tests remain in [docs/TESTING-alpha70.md](docs/TESTING-alpha70.md). They refer to the old Sanguine name and `/slt`; current commands use `/nrt`.
 
-## Alpha.79 version check
+## Alpha.80 version check
 
 - [ ] Open Settings > Advanced > Version Check as an ordinary raider and while solo.
 - [ ] Outside a group, check that only the current character's installed addon versions appear.
@@ -44,3 +44,13 @@ Historical detailed council tests remain in [docs/TESTING-alpha70.md](docs/TESTI
 - [ ] Verify guild members are not queried and raid management permissions stay unchanged.
 
 Automated version tests cover these scopes, request throttling, stale and outsider replies, and separation from session authority. Everyone must update to alpha.79 to answer the new independent version query.
+
+## Alpha.80 test modes
+
+- [ ] Open Settings > Advanced > Test Modes and start/end each test using its button.
+- [ ] Solo SoftRes: review 20 simulated players, reserve items, lock, queue duplicates separately, roll with MS/OS buttons, confirm awards and simulate delivery.
+- [ ] Check SOLO TEST labels on overview, browser, results, awards, Loot and Timer.
+- [ ] Exit and restart; confirm test results do not appear in real saved history.
+- [ ] Confirm joining a group ends the solo SR test and the test buttons cannot replace live sessions.
+
+Automated solo SoftRes checks cover 42 scenarios, including native side-effect isolation, saved-data preservation, command aliases, restart/group-join cleanup and both test buttons.

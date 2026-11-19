@@ -505,6 +505,14 @@ function A:BuildSettingsUI(u,window,text,button,edit)
     section(advanced,"Diagnostics",460)
     u.settingsDiagnostics=button(advanced,"Open diagnostics",0,-510,180,function() A:ShowDiagnostics() end)
     description(advanced,"View the local diagnostic report. Recording remains opt-in; nothing is uploaded automatically.",555);advanced:SetHeight(635)
+    section(advanced,"Test Modes",635)
+    u.addTestModeButton=function(title,help,y,action)
+        local control=button(advanced,"",0,0,210,action)
+        row(advanced,title,help,y,control,210)
+        advanced:SetHeight(math.max(advanced:GetHeight(),y+85));u.settingsLayoutKey=nil
+        return control
+    end
+    u.lootCouncilTest=u.addTestModeButton("Loot Council Test","Uses the existing council simulation: solo outside a group, shared testing with a group.",675,function() A:ToggleCouncilTest() end)
     -- Keep operational item utilities with Loot; the launcher owns window navigation.
     u.itemTools=window("NauseRaidToolsItemTools","Add loot",620,170,true)
     move(u.itemInput,u.itemTools,20,90,430);move(u.add,u.itemTools,465,90,130);u.itemInput.hint:Hide()
@@ -816,7 +824,30 @@ function A:RenderRecoveryPreview()
     u.reviewRecoveredLoot:SetShown(deliveries and deliveries>0 and self:CanViewLoot() or false)
 end
 
+function A:ToggleCouncilTest()
+    local sr=type(NauseSoftReserve)=="table" and NauseSoftReserve
+    if sr and sr.session then self:Print("End the SoftRes session or test before starting a Loot Council test.");return false end
+    if self.demo then self:LeaveTest();return true end
+    if self.state or self.recoveryPending then self:Print("End the current session or recovery before starting a Loot Council test.");return false end
+    self:StartDemo();return self.demo==true and self.state~=nil
+end
+function A:RefreshTestControls()
+    local u=self.ui;if not u then return end
+    local sr=type(NauseSoftReserve)=="table" and NauseSoftReserve
+    local srTest=sr and sr.test==true
+    local councilTest=self.demo and not srTest
+    local idle=not self.state and not self.demo and not self.recoveryPending and not (sr and sr.session)
+    if u.lootCouncilTest then
+        u.lootCouncilTest:SetText(councilTest and "End Loot Council test" or "Start Loot Council test")
+        u.lootCouncilTest:SetEnabled(councilTest or (idle and not self.Client:Combat()))
+    end
+    if u.softResTest then
+        u.softResTest:SetText(srTest and "End SoftRes test" or "Start SoftRes test")
+        u.softResTest:SetEnabled(srTest or (idle and not self.Client:InGroup() and not self.Client:Combat()))
+    end
+end
 function A:RenderSettingsPresentation()
+    self:RefreshTestControls()
     local u,s=self.ui,self.state
     self:RefreshSettingsContext()
     local announcements=self:AnnouncementSettings()

@@ -1,5 +1,5 @@
 local _, S = ...
-S.version = "0.1.0-experimental.16"
+S.version = "0.1.0-experimental.17"
 S.maxPlayers, S.maxReserves = 40, 6
 local function integer(n, lo, hi) return type(n)=="number" and n==math.floor(n) and n>=lo and n<=hi end
 S.Integer = integer

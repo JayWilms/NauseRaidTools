@@ -1,4 +1,4 @@
-Nause Raid Tools 0.12.0-alpha.79 - private testing build
+Nause Raid Tools 0.12.0-alpha.80 - private testing build
 
 INSTALL
 Exit WoW. Remove the old SanguineLootTools or SanguineLootCouncil folder.
@@ -10,6 +10,15 @@ Enable Nause Raid Tools at character selection. Commands start with /nrt.
 This rebrand uses a fresh NauseRaidToolsDB for settings and history.
 Run /nrt test solo or as group leader to start simulated loot.
 Use /nrt leave-test to exit. Use /nrt help for the command list.
+
+NEW IN ALPHA.80
+- Settings > Advanced > Test Modes has matching Start / End buttons for council
+  and SoftRes testing. Active sessions and the other test block starting a test.
+- Solo SoftRes test includes 20 simulated players and 10 loot copies, automatic
+  sample rolls, award confirmation and simulated delivery, without a raid.
+- /nrt softres test starts or refreshes it; /nrt leave-test exits.
+- Test windows are labelled. Real bags, trades, chat and saved SR history are
+  isolated. Joining a real group ends the solo SoftRes test.
 
 NEW IN ALPHA.79
 - Settings > Advanced > Version Check is available at every raid rank.
@@ -523,3 +532,10 @@ A missing reply is unconfirmed, not proof an addon is absent. This checks
 installed versions, not GitHub releases. Detailed Pre-Raid Loot Check remains
 restricted to the raid leader and Master Looter; /nrt check opens Version Check
 for other players.
+
+TEST MODE BUTTONS (included in alpha.80)
+Settings > Advanced > Test Modes has a Start / End Loot Council test button.
+It uses the existing /nrt test flow: solo outside groups and shared group testing
+when grouped. When Nause Soft Reserve is enabled, the matching Start / End
+SoftRes test button appears beneath it. Live sessions and the other test mode
+block starting a test; normal raid permissions are unchanged.

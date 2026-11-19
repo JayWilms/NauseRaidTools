@@ -2,7 +2,7 @@
 ## Title: Nause Soft Reserve EXPERIMENTAL
 ## Notes: Separate SR > MS > OS experiment for WoW: Forever. Use /nrt softres.
 ## Author: Joshua Wilmshurst
-## Version: 0.1.0-experimental.16
+## Version: 0.1.0-experimental.17
 ## Dependencies: NauseRaidTools
 ## OptionalDeps: ItemDB, AtlasLootClassic, AtlasLootClassic_DungeonsAndRaids
 ## SavedVariables: NauseSoftReserveDB
@@ -34,3 +34,4 @@ Requests.lua
 Inventory.lua
 Delivery.lua
 Chat.lua
+TestMode.lua

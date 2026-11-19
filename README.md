@@ -2,11 +2,11 @@
 
 Raid loot tools for WoW: Forever. Previously Sanguine Loot Tools.
 
-**Current testing build: 0.12.0-alpha.79**, protocol 19. Includes **Nause Soft Reserve 0.1.0-experimental.16**. This is an alpha pre-release; multiplayer trade and recovery checks are still in progress.
+**Current testing build: 0.12.0-alpha.80**, protocol 19. Includes **Nause Soft Reserve 0.1.0-experimental.17**. This is an alpha pre-release; multiplayer trade and recovery checks are still in progress.
 
 ## Download and install
 
-Download [the alpha.79 install ZIP](https://github.com/JayWilms/NauseRaidTools/releases/tag/v0.12.0-alpha.79), or use the [repository copy](dist/NauseRaidTools-0.12.0-alpha.79-install.zip).
+Download [the alpha.80 install ZIP](https://github.com/JayWilms/NauseRaidTools/releases/tag/v0.12.0-alpha.80), or use the [repository copy](dist/NauseRaidTools-0.12.0-alpha.80-install.zip).
 
 1. Exit World of Warcraft.
 2. Remove the old SanguineLootTools or SanguineLootCouncil addon folder, if installed.
@@ -15,6 +15,14 @@ Download [the alpha.79 install ZIP](https://github.com/JayWilms/NauseRaidTools/r
 5. For SoftRes item browsing, enable AtlasLoot Forever and its Dungeons and Raids module, or a compatible ItemDB. These separate addons are not bundled.
 
 Use the same build on everyone participating in a session. Nause uses its own saved data; old Sanguine settings are not migrated.
+
+## Test Modes
+
+Settings > Advanced > Test Modes has matching Start/End buttons for Loot Council and SoftRes. The council button uses the existing solo or shared group simulation. The SoftRes test runs outside a group with 20 simulated players, 8 item choices and 10 loot copies, including duplicate copies, offline players and missing submissions.
+
+`/nrt softres test` (or `/nrtsr test`) starts or resets the solo SoftRes test. Lock the sample reservations, queue loot, use MS/OS to roll locally, confirm an award and simulate delivery. `/nrt leave-test` or `/nrt softres leave-test` exits. Joining a real group automatically ends the SoftRes test.
+
+Test titles are labelled. Real bags, trades, chat announcements, addon snapshots and saved SR history/session data are isolated. A live session or the other test mode blocks starting a test. Simulations do not verify real multiplayer communication or delivery.
 
 ## Version Check
 

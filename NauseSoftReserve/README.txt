@@ -1,4 +1,4 @@
-Nause Soft Reserve - 0.1.0-experimental.16
+Nause Soft Reserve - 0.1.0-experimental.17
 
 Requires NauseRaidTools. Install the NauseRaidTools and NauseSoftReserve folders
 alongside each other inside Interface/AddOns. Everyone using the SR interface
@@ -51,3 +51,17 @@ slot usage and unsaved-selection status. Switching tabs preserves a draft.
 Rolls shows one primary next action: Stop, Award, Tie Reroll or View Delivery.
 Award corrections are collapsed until requested. Import and sync are secondary
 Overview actions. Normal text is white; headings and primary actions use gold.
+
+SOLO SOFTRES TEST (included in alpha.80)
+Open Settings > Advanced > Test Modes > Start SoftRes test,
+or type /nrt softres test (also /nrtsr test). No raid or ItemDB is required.
+The test provides 20 simulated players, 8 item choices and 10 loot copies,
+including duplicates, missing submissions and offline players. Reservations
+start open. Lock them, open Loot and Queue an item. Sample players roll
+automatically; MS / OS buttons generate your own local test rolls. Review
+results and confirm an award, then use Awards / Trade to simulate delivery.
+Window titles identify SOLO TEST. Real bags, trades, chat announcements,
+network snapshots and saved SR sessions/history are not used or changed.
+/nrt softres leave-test, /nrtsr leave-test or /nrt leave-test exits.
+Re-running the start command resets the test. Joining a real group ends it.
+This UI simulation does not verify real multiplayer synchronisation or trades.
