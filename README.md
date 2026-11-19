@@ -2,11 +2,11 @@
 
 Raid loot tools for WoW: Forever. Previously Sanguine Loot Tools.
 
-**Current testing build: 0.12.0-alpha.81**, protocol 19. Includes **Nause Soft Reserve 0.1.0-experimental.18**. This is an alpha pre-release; multiplayer trade and recovery checks are still in progress.
+**Current testing build: 0.12.0-alpha.84**, protocol 19. Includes **Nause Soft Reserve 0.1.0-experimental.21**. This is an alpha pre-release; multiplayer trade and recovery checks are still in progress.
 
 ## Download and install
 
-Download [the alpha.81 install ZIP](https://github.com/JayWilms/NauseRaidTools/releases/tag/v0.12.0-alpha.81), or use the [repository copy](dist/NauseRaidTools-0.12.0-alpha.81-install.zip).
+Download [the alpha.84 install ZIP](https://github.com/JayWilms/NauseRaidTools/releases/tag/v0.12.0-alpha.84), or use the [repository copy](dist/NauseRaidTools-0.12.0-alpha.84-install.zip).
 
 1. Exit World of Warcraft.
 2. Remove the old SanguineLootTools or SanguineLootCouncil addon folder, if installed.
@@ -16,15 +16,23 @@ Download [the alpha.81 install ZIP](https://github.com/JayWilms/NauseRaidTools/r
 
 Use the same build on everyone participating in a session. Nause uses its own saved data; old Sanguine settings are not migrated.
 
+## SoftRes interface
+
+Setup uses level-range and dungeon/raid dropdowns with multiple selections. AtlasLoot recommended ranges take priority; the entry-level requirement is kept separate from the recommended range.
+
+Reservations uses My reserves, All reserves, Search results and instance/boss navigation, with a scrolling item list, reserve totals, item-type details and visible remaining slots. Your selections stay visible until Submit. Hover tooltips are disabled in Reservations.
+
+Awards uses a scrolling table with item icons, separate columns, Pending/Delivered/All filters and a selected-item delivery panel. Only relevant delivery actions are enabled. Correction controls stay separate. Award confirmation shows the item name and colour. Rolls uses a scrolling results list while preserving SR/MS/OS priority and leader/tie/invalid highlights.
+
 ## Test Modes
 
-Test Modes appears at the top of Settings > Advanced with matching Start/End buttons for Loot Council and SoftRes. Both choose solo or shared group testing automatically.
+Open Settings > Advanced > Test Modes. Matching Start/End buttons for Loot Council and SoftRes choose solo or group testing automatically. SoftRes first asks for dungeons/raids, 1-6 reserves and a scenario. Enable AtlasLoot Forever with Dungeons and Raids, or compatible ItemDB, for content selection.
 
-Outside a group, SoftRes provides 20 simulated players, 8 item choices and 10 loot copies. Sample players roll automatically. In a party or raid, the leader starts the test and actual group members submit reservations and use MS/OS for native rolls. All participants need this build. Use `/nrt softres test` or `/nrtsr test` to start; members can also use it to request to join.
+Scenarios: Normal run, Tied rolls, No valid rolls, Stacked reserves, Pending delivery and Import examples. Scripted scenarios seed results; Normal group tests use native player rolls. Solo mode provides 20 players. Ten simulated loot copies come from the selected content. Examples exercise the actual Softres.it import preview and validation and are never applied automatically.
 
-Lock reservations, queue loot, confirm an award and simulate delivery. `/nrt leave-test` exits locally; the leader ending the test stops it for everyone. Re-running the command as leader resets it. Disbanding or changing leaders ends a shared test. Joining a group ends a solo test.
+Use `/nrt softres test` or `/nrtsr test` to start. The group leader chooses content and confirms; participants can request to join. `/nrt leave-test` exits locally, while the leader ending a shared test stops it for everyone. Restarting opens setup again. Real bags, trades and saved SR sessions/history remain isolated. All participants need this build. Real trade and disconnect/recovery testing remain required.
 
-Test windows are labelled. Real bags, trades and saved SR sessions/history are untouched. Shared tests use separate test messages, so older clients cannot mistake them for live sessions. Live sessions and the other test mode block starting a test. Automated checks do not replace native multiplayer testing.
+Validation: all 28 automated suites passed, including virtual-list checks through the full 800-roll log and extracted installation ZIP checks. Native in-game visual validation is still required.
 
 ## Version Check
 

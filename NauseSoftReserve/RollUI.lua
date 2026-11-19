@@ -1,5 +1,22 @@
 local _,S=...
 local A=S.base
+function S:RollWinnerText(winners,maximum)
+    local names={};for i,name in ipairs(winners or {}) do
+        if not maximum or i<=maximum then names[#names+1]=self:PlayerText(name) end
+    end
+    if maximum and #(winners or {})>maximum then names[#names+1]="+"..(#winners-maximum).." more" end
+    return table.concat(names,", ")
+end
+function S:RollEligibilityText(round,player)
+    if round.passed[player] then return "You passed this item. Your rolls cannot win." end
+    if round.tiebreak then
+        if not round.tiePool[player] then return "Only tied players can roll in this tie-break. You are not eligible." end
+        return "You are in the tie-break. Roll once with /roll "..(round.tier=="OS" and 99 or 100).."."
+    end
+    local count=round.eligible[player] or 0
+    if count>0 then return "You have "..count.." soft reserve"..(count==1 and "" or "s")..": choose MS (/100) for up to "..count.." SR roll"..(count==1 and "" or "s")..", or OS (/99) for one off-spec roll. Your best valid roll counts." end
+    return "No soft reserve: choose MS (/100) or OS (/99). One roll; valid SR rolls take priority."
+end
 function S:RollKey()
     local s=self.session;local r=s and s.round
     return r and (s.id..":"..r.item..":"..r.tier..":"..tostring(r.epoch or 0))
@@ -37,7 +54,11 @@ function S:RenderRollWindow()
         if f.TitleText then f.TitleText:SetText("Nause Raid Tools - Item Roll") end
         table.insert(UISpecialFrames,"NauseSRRollWindow")
         local function label(y) local l=f:CreateFontString(nil,"OVERLAY","GameFontNormal");l:SetPoint("TOPLEFT",20,y);l:SetWidth(460);l:SetJustifyH("LEFT");return l end
-        f.item=label(-45);f.status=label(-75);f.details=label(-105);f.result=label(-150)
+        f.item=label(-45);f.item:ClearAllPoints();f.item:SetPoint("TOPLEFT",62,-45);f.item:SetWidth(418);f.item:SetHeight(24);f.item:SetMaxLines(1);f.item:SetWordWrap(false);f.item:SetFontObject("GameFontNormalLarge")
+        f.icon=f:CreateTexture(nil,"ARTWORK");f.icon:SetPoint("TOPLEFT",20,-40);f.icon:SetSize(32,32)
+        f.status=label(-75);f.status:SetHeight(20);f.status:SetMaxLines(1)
+        f.details=label(-105);f.details:SetHeight(38)
+        f.result=label(-150);f.result:SetHeight(30);f.result:SetMaxLines(2)
         f:SetScript("OnEnter",function() if f.link and GameTooltip then GameTooltip:SetOwner(f,"ANCHOR_RIGHT");GameTooltip:SetHyperlink(f.link);GameTooltip:Show() end end)
         f:SetScript("OnLeave",function() if GameTooltip then GameTooltip:Hide() end end)
         local function button(text,x,callback)
@@ -54,12 +75,15 @@ function S:RenderRollWindow()
     local f=self.rollUI;local key=self:RollKey()
     local db=A.ItemLibrary and A:ItemLibrary();local link
     if db and type(db.GetLink)=="function" then local ok,value=pcall(db.GetLink,db,r.item);if ok then link=value end end
-    f.link=link or ("item:"..r.item);f.item:SetText(link or ("Item "..r.item))
+    f.link=link or ("item:"..r.item);f.item:SetText(self:ReservationItemText(r.item,link))
     f.status:SetText((r.tiebreak and r.tier or "SR > MS > OS — one roll window")..(r.tiebreak and " — tie-break" or "")..(r.closed and " — CLOSED" or " — OPEN"))
-    local names={};for name,n in pairs(r.eligible) do names[#names+1]=name.." x"..n end;table.sort(names)
-    f.details:SetText(#names>0 and ("Soft reserves: "..table.concat(names,", ")) or "MS /100 and OS /99 are accepted together.")
+    local ok,icon=A.Client:Call("C_Item.GetItemIconByID",r.item);f.icon:SetTexture(ok and icon or "Interface/Icons/INV_Misc_QuestionMark")
+    f.details:SetText(self:RollEligibilityText(r,A.me))
     local mine=r.rolls[A.me] or {};local text={};for _,v in ipairs(mine) do text[#text+1]=tostring(v) end
-    f.result:SetText(r.passed[A.me] and "You passed this round." or (r.closed and ((r.winners and #r.winners>0) and ("Result: "..table.concat(r.winners,", ").." — "..r.best) or "No valid winner. Leader can cancel/restart this item.") or (#text>0 and ("Your recorded rolls: "..table.concat(text,", ")) or "Waiting for a native roll. MS: 1–100. OS: 1–99.")))
+    f.result:SetText(r.passed[A.me] and "You passed this round." or (r.closed and ((r.winners and #r.winners>0) and ((#r.winners>1 and "Tied: " or "Winner: ")..self:RollWinnerText(r.winners,2).." — "..r.best) or "No valid winner. Leader can cancel/restart this item.") or (#text>0 and ("Your recorded rolls: "..table.concat(text,", ")) or "Waiting for a native roll. MS: 1–100. OS: 1–99.")))
+    self:SetTextRole(f.details,"muted")
+    self:SetTextRole(f.status,r.tiebreak and "attention" or "body")
+    self:SetTextRole(f.result,r.closed and (r.winners and #r.winners==1 and "ready" or "attention") or "body")
     f.ms:SetEnabled(self:RollAllowance("MS")>0 and type(RandomRoll)=="function")
     f.os:SetEnabled(self:RollAllowance("OS")>0 and type(RandomRoll)=="function")
     f.pass:SetEnabled(not r.closed and not r.passed[A.me] and A.roster[A.me]~=nil)

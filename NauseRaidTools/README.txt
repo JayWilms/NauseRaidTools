@@ -1,4 +1,34 @@
-Nause Raid Tools 0.12.0-alpha.81 - private testing build
+Nause Raid Tools 0.12.0-alpha.84 - private testing build
+
+ALPHA.84
+Includes SoftRes experimental.21. AtlasLoot's recommended level ranges are now
+read correctly. Reservations no longer opens hover tooltips. Award confirmation
+shows item names and loot colours. Awards has a scrolling table, Pending /
+Delivered / All filters and a selected-item delivery panel with relevant actions.
+Rolls has a scrolling results list, retaining winner/tie/invalid highlights.
+Includes all alpha.82/.83 SoftRes UI, content-picker and test-scenario changes.
+Replace both addon folders; use the same build for all group-test participants.
+All 28 automated suites passed. Native in-game visual/trade/recovery checks remain.
+
+ALPHA.83
+Includes SoftRes experimental.20. Dungeon/raid setup now uses level-range and
+content dropdowns with a selected-content list. Unknown levels remain available.
+SoftRes dropdowns use drawn chevrons to replace unsupported square characters.
+Reservations now has My reserves, All reserves, Search results and boss/instance
+navigation, a scrolling item list, reserve totals and player names on hover.
+Remaining slots and selected picks stay visible while browsing. Drafts still
+require Submit. Replace both addon folders; update every group-test participant.
+The new layout needs native in-game visual checking.
+
+ALPHA.82
+Includes SoftRes experimental.19: consistent styling/navigation, clearer
+reservation browsing, roll/award/delivery flow and the Timer overlap fix.
+Import Softres.it is directly visible on Overview; Queue All is retained.
+Start SoftRes test opens the dungeon/raid picker and Test Scenario selector.
+Choose Normal run, Tied rolls, No valid rolls, Stacked reserves, Pending delivery
+or Import examples. Tests use the AtlasLoot/ItemDB catalogue. Replace both addon
+folders and update everyone participating in group tests. Native in-game layout,
+real trade and disconnect/recovery testing remain required.
 
 INSTALL
 Exit WoW. Remove the old SanguineLootTools or SanguineLootCouncil folder.

@@ -1,6 +1,7 @@
 local root=...
 local make=assert(loadfile(root.."/qa/softres/improvements_client.lua"))(root,root)
 local a,e,s=make("Leader-Realm")
+local confirm=assert(loadfile(root.."/qa/softres/test_catalogue.lua"))(a,e)
 local count=0
 local function check(value,message) count=count+1;assert(value,message) end
 e.IsInRaid=function() return false end;e.IsInGroup=function() return false end
@@ -16,6 +17,9 @@ check(a.ui.softResTest~=nil and a.ui.lootCouncilTest~=nil,"paired settings test 
 check(a.ui.softResTest:GetWidth()==a.ui.lootCouncilTest:GetWidth(),"test buttons have different widths")
 local start=a:Name("player")
 local ok,why=e.SlashCmdList.NAUSERAIDTOOLS("softres test");assert(ok,why)
+check(s.testSetup and not s.session and s.setup:IsShown(),"test skipped content selection")
+check(not s:ConfirmPugSetup(),"empty content selection started a test")
+assert(confirm(s))
 check(s.test and a.demo and a.state==nil and s:IsHost(),"test needed raid authority or manufactured a council session")
 check(a.ui.softResTest:GetText()=="End SoftRes test" and not a.ui.lootCouncilTest:IsEnabled(),"SoftRes test did not update paired controls")
 local players=0;for _ in pairs(a.roster) do players=players+1 end
@@ -26,7 +30,7 @@ check(s.sessionSetup.summary:GetText():find("16/20 submitted",1,true),"fixture s
 check(a.ui.lootPanels.timer.window.title:GetText():find("SOLO TEST",1,true),"Loot window was not labelled as a test")
 s:Render();s:Render()
 check(not s.sessionSetup.status:GetText():find("SOLO TEST · SOLO TEST",1,true),"test banner duplicated while rendering")
-check(#s:BrowserResults()==8,"test required an external catalogue")
+check(#s:BrowserResults()==8,"test did not use the selected catalogue")
 s:ShowBrowser();check(s.browser.rows[1].entry~=nil,"fixture browser unavailable")
 check(not a:StartDemo(),"council test overlapped SoftRes test")
 check(not s:CollectPugLoot(a.me,{}),"real bag report accepted in test")
@@ -58,7 +62,7 @@ assert(e.SlashCmdList.NAUSERAIDTOOLS("softres leave-test"))
 check(not s.test and not s.session and not a.demo and a.me==start,"exit did not restore live context")
 check(a.Encode(e.NauseSoftReserveDB)==before,"exit changed saved data")
 check(a.ui.itemToolsButton:GetText()=="Add loot","exit left SoftRes Loot controls installed")
-assert(s:StartTest());assert(s:StartTest())
+assert(s:StartTest());assert(confirm(s));assert(s:StartTest());assert(confirm(s))
 check(s.test and #s.session.history==0,"restart retained test awards")
 e.IsInGroup=function() return true end
 s.events:GetScript("OnEvent")(s.events,"GROUP_ROSTER_UPDATE")
@@ -69,10 +73,26 @@ s.session={id="real-run"}
 check(not s:StartTest() and s.session.id=="real-run","test replaced a live SR session")
 s.session=nil
 a.state={id="council"};check(not s:StartTest(),"test replaced a council session");a.state=nil
-e.SlashCmdList.NAUSESR("test");check(s.test,"/nrtsr test alias failed");e.SlashCmdList.NAUSERAIDTOOLS("leave-test")
+e.SlashCmdList.NAUSESR("test");check(s.testSetup,"/nrtsr test alias failed");e.SlashCmdList.NAUSERAIDTOOLS("leave-test")
 check(not s.test and not a.demo,"standard leave-test command did not stop SR test")
 check(a.Encode(e.NauseSoftReserveDB)==before,"restart/auto-exit changed saved data")
 check(a.ui.lootCouncilTest:IsEnabled() and a.ui.softResTest:IsEnabled(),"test buttons remained disabled after exit")
+-- Picker cancellation, selected-content filtering and custom reserve limits.
+assert(s:StartTest());s.setup:Hide()
+check(not s.test and not s.session and not a.demo and a.Encode(e.NauseSoftReserveDB)==before,"cancelling content selection left test context or changed saved data")
+assert(s:StartTest());assert(confirm(s,{["Fixture Dungeon"]=true},3))
+check(s.session.limit==3 and s.session.selectedInstances["Fixture Dungeon"] and not s.session.selectedInstances["Fixture Raid"],"test ignored selected content or reserve limit")
+check(#s.testItems==4 and #s:BrowserResults()==4,"test included loot outside selected content")
+for _,entry in ipairs(s.session.lootEntries) do
+    local id=tonumber(entry.link:match("item:(%d+)"))
+    check(s:ScopeAllows(s.session,id),"simulated loot came from an unselected instance")
+end
+check(#s.session.reserves[a.me]==3,"test reservations ignored custom limit")
+assert(s:StopTest())
+local provider=e.LibStub;e.LibStub=nil
+check(not s:StartTest() and not s.test and not a.demo,"missing source data left a pending test")
+e.LibStub=provider
+
 a.ui.lootCouncilTest:GetScript("OnClick")()
 check(a.demo and a.state and not s.test,"Loot Council button did not start existing solo simulation")
 check(a.ui.lootCouncilTest:GetText()=="End Loot Council test" and not a.ui.softResTest:IsEnabled(),"council test did not update paired controls")

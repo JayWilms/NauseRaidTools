@@ -105,11 +105,13 @@ function S:CountdownText()
 end
 function S:RenderCountdown()
     local text=self:CountdownText()
+    local round=self.session and self.session.round;local now=clock()
+    local role=not round and "muted" or (round.closed and "muted" or (round.deadline and now and round.deadline-now<=10 and "attention" or "body"))
     if self.rollUI then
         if not self.rollUI.countdown then
             local l=self.rollUI:CreateFontString(nil,"OVERLAY","GameFontNormal");l:SetPoint("TOPLEFT",20,-185);l:SetWidth(460);l:SetJustifyH("LEFT");self.rollUI.countdown=l
         end
-        self.rollUI.countdown:SetText(text)
+        self.rollUI.countdown:SetText(text);self:SetTextRole(self.rollUI.countdown,role)
         local r=self.session and self.session.round;local now=clock()
         self.rollUI.ms:SetEnabled(self:RollAllowance("MS")>0 and type(RandomRoll)=="function")
         self.rollUI.os:SetEnabled(self:RollAllowance("OS")>0 and type(RandomRoll)=="function")
@@ -125,9 +127,9 @@ function S:RenderCountdown()
             f.seconds:SetScript("OnEscapePressed",function(e) e:ClearFocus() end)
             f.applyTimer=S:CreateUIFrame("Button",nil,f,"UIPanelButtonTemplate");f.applyTimer:SetPoint("TOPLEFT",330,-612);f.applyTimer:SetSize(180,25);f.applyTimer:SetText("Set for next item")
             f.applyTimer:SetScript("OnClick",function() local ok,why=S:SetRollDuration(tonumber(f.seconds:GetText()));if why then S:Print(why) end end)
-            local note=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall");note:SetPoint("TOPLEFT",530,-620);note:SetText("Active deadlines cannot be extended.")
+            local note=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall");note:SetPoint("TOPLEFT",530,-620);note:SetText("Active deadlines cannot be extended.");S:SetTextRole(note,"muted")
         end
-        f.countdown:SetText(text)
+        f.countdown:SetText(text);self:SetTextRole(f.countdown,role)
         local r=self.session and self.session.round;local now=clock()
         f.ms:SetEnabled(self:RollAllowance("MS")>0 and type(RandomRoll)=="function")
         f.os:SetEnabled(self:RollAllowance("OS")>0 and type(RandomRoll)=="function")

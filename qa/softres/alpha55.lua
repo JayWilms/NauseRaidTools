@@ -51,7 +51,7 @@ check(s.setup and s.setup.TitleText and s.setup.nrtChrome,"initial SR Setup lack
 check(s.setup.lockButton and s.setup.collapseButton and s.setup.closeButton,"title controls missing")
 s.setupSelection={["Ruins of Lordaeron"]=true};s.setup.limit:SetText("2");assert(s:ConfirmPugSetup())
 check(s.session and s.sessionSetup and s.sessionSetup.nrtChrome and not a.state,"focused setup failed")
-check(s.sessionSetup.TitleText:GetText()=="Nause Raid Tools - SR Setup","setup rebrand")
+check(s.sessionSetup.TitleText:GetText()=="Nause Raid Tools - SoftRes - Overview","setup rebrand")
 check(not s.ui,"legacy crowded management was constructed")
 assert(s:Reserve(s.session,a.me,{279259,279259},"in-game"))
 assert(s:Reserve(s.session,"Raider-Realm",{279259},"in-game"))

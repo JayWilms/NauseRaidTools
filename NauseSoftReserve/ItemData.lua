@@ -46,7 +46,7 @@ function S:AtlasItemLibrary()
                         end
                     end
                 end
-                if added then library.instances[name]=true end
+                if added then library.instances[name]=instance end
             end
         end
     end
@@ -55,7 +55,10 @@ function S:AtlasItemLibrary()
     if #library.ids==0 then return end
     function library:GetInstances()
         local rows={}
-        for name in pairs(self.instances) do rows[#rows+1]={name=name} end
+        for name,instance in pairs(self.instances) do
+            rows[#rows+1]={name=name,mapID=instance.mapID or instance.MapID,minLevel=instance.minLevel,maxLevel=instance.maxLevel,
+                levelRange=instance.levelRange or instance.LevelRange,isRaid=instance.isRaid,maxNumPlayers=instance.maxNumPlayers}
+        end
         table.sort(rows,function(a,b) return a.name<b.name end)
         return rows
     end

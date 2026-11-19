@@ -37,6 +37,12 @@ function S:LayoutSharedTimer()
     local p=A.ui and A.ui.lootTimers;if not p then return end
     for _,row in ipairs(p.rows) do
         if row.srWinner then
+            -- Expanded SR rows have two item lines; keep the caption above its status.
+            row.caption:ClearAllPoints()
+            row.caption:SetPoint("TOPLEFT",p.compact and 34 or 46,p.compact and -7 or (self.session and -5 or -13))
+            row.srWinner:ClearAllPoints()
+            row.srWinner:SetPoint("TOPLEFT",row.caption,"BOTTOMLEFT",0,-2)
+            row.srWinner:SetHeight(14)
             row.srWinner:SetWidth(row.caption:GetWidth())
             row.holderStatus:SetShown(not p.compact and not self.session)
             row.srTrade:ClearAllPoints();row.srTrade:SetPoint("TOPLEFT",row.holder,"BOTTOMLEFT",0,-1)
@@ -54,6 +60,7 @@ function A:RenderLootTimers()
         if active then
             for _,row in ipairs(p.rows) do if row.srWinner then row.srWinner:Hide();row.srTrade:Hide();row.holderStatus:SetShown(not p.compact) end end
             active=false
+            S:LayoutSharedTimer()
         end
         return render(self)
     end
@@ -65,7 +72,7 @@ function A:RenderLootTimers()
     for _,row in ipairs(p.rows) do
         if not row.srWinner then
             row.srWinner=row:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall")
-            row.srWinner:SetPoint("TOPLEFT",46,-24);row.srWinner:SetJustifyH("LEFT");row.srWinner:SetMaxLines(1);row.srWinner:SetWordWrap(false)
+            row.srWinner:SetJustifyH("LEFT");row.srWinner:SetMaxLines(1);row.srWinner:SetWordWrap(false)
             row.srTrade=S:CreateUIFrame("Button",nil,row,"UIPanelButtonTemplate");row.srTrade:SetSize(65,18)
         end
         local entry=byID[row.tracked];local h=entry and entry.srAward and S:AwardByID(entry.srAward)

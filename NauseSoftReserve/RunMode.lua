@@ -69,7 +69,7 @@ function A:Act(op,data)
 end
 -- Also enforce mutual exclusion at the authoritative reducer and both recovery paths.
 function A:Reduce(sender,p)
-    if type(p)=="table" and p.op=="start" and S.session then return false,"End the PuG Run before starting a Guild Run." end
+    if type(p)=="table" and p.op=="start" and (S.session or S.test) then return false,"End the PuG Run before starting a Guild Run." end
     return originalReduce(self,sender,p)
 end
 function A:ResumeSession(...)
@@ -102,6 +102,7 @@ function S:InstallModeControls()
     end
 end
 function S:RefreshModeControls()
+    self:RefreshManagerNavigation()
     local u=A.ui;if not u then return end
     local pug=self.session~=nil
     u.start:SetText(pug and "Open PuG session" or "Start session")

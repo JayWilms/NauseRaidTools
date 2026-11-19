@@ -1,6 +1,6 @@
 local _,S=...
 local A=S.base
-local cacheFields={"catalogue","catalogueJobs","cataloguePosition","catalogueDB","cataloguePending","catalogueRevision","catalogueError","catalogueRetryAt","browserCache","browserCacheCount","browserOptionCache","browserDraft","browserOriginal","browserSession","browserInstance","browserBoss","browserPage","setupItemPending","atlasLibrary","selectedPugLoot","selectedAward","collector","inventory","deliveryView","paintSignatures","lootPaint","countdownPaint","shownLeaderKey","shownRollKey","localRollKey","localRollCount","localRollChoice","pendingRequest","lastReservationAck","requestStatus","requestResults","replyLimits","sentSID","sentPublic","syncDue","syncTargets","streamSequence","localLootSeq","rosterFilter","receivedSequence","nextRecovery","endedByLeader","lastEnded","syncLimits","popupSessions"}
+local cacheFields={"catalogue","catalogueJobs","cataloguePosition","catalogueDB","cataloguePending","catalogueRevision","catalogueError","catalogueRetryAt","browserCache","browserCacheCount","browserOptionCache","browserDraft","browserOriginal","browserSession","browserViewSession","browserInstance","browserBoss","browserPage","browserMode","browserSidebarDefaulted","browserListKey","browserItemOffset","browserSearchReturnMode","setupItemPending","setupSelection","setupInstances","setupKnown","setupLevels","setupLevelFilter","setupPage","atlasLibrary","selectedPugLoot","selectedAward","awardFilter","awardViewSession","awardScrollOffset","awardListKey","rollScrollKey","rollScrollOffset","collector","inventory","deliveryView","paintSignatures","lootPaint","countdownPaint","shownLeaderKey","shownRollKey","localRollKey","localRollCount","localRollChoice","pendingRequest","lastReservationAck","requestStatus","requestResults","replyLimits","sentSID","sentPublic","syncDue","syncTargets","streamSequence","localLootSeq","rosterFilter","receivedSequence","nextRecovery","endedByLeader","lastEnded","syncLimits","popupSessions"}
 local baseFields={"me","leader","roster","demo","groupTest","gameLeader","rev","renderSession","selectedTracked","selectedLootKey"}
 local function capture(object,keys)
     local values={};for _,key in ipairs(keys) do values[key]={value=object[key]};object[key]=nil end;return values
@@ -25,9 +25,11 @@ end
 function S:PrepareTestContext(group)
     local me=A:Name("player");if not me then return end
     A:BuildUI()
+    local provider=library(A)
     local settings=self:DB()
     local context={group=group,base=capture(A,baseFields),cache=capture(self,cacheFields)}
     context.titles={}
+    context.setupTitle=self.setup and self.setup.TitleText:GetText()
     for _,frame in ipairs({A.ui.lootPanels.timer.window,A.ui.lootTimers.window}) do
         local title=frame.title or frame.TitleText
         if title then context.titles[#context.titles+1]={label=title,text=title:GetText()} end
@@ -39,17 +41,80 @@ function S:PrepareTestContext(group)
         local name=string.format("Raider%02d-Test",i);names[#names+1]=name;A.roster[name]=true
         self.testPlayers[name]={class=classes[(i-1)%#classes+1],offline=i>=18}
     end
-    local items=A:TestItems();self.testItems={};local byID={}
-    for i=1,8 do local row=items[i];self.testItems[i]={id=row.id,link=row.link,name=row.link:match("|h%[(.-)%]|h") or ("Test item "..i)};byID[row.id]=self.testItems[i] end
-    local fixture={}
-    function fixture:GetInstances() return {{name="SoftRes Test Raid"}} end
-    function fixture:GetSources(id) return byID[id] and {{instance="SoftRes Test Raid",boss="Simulated Boss"}} or {} end
-    function fixture:Search() local ids={};for _,item in ipairs(S.testItems) do ids[#ids+1]=item.id end;return ids end
-    function fixture:GetName(id) return byID[id] and byID[id].name end
-    function fixture:GetInfo(id) return self:GetName(id) end
-    function fixture:GetLink(id) return byID[id] and byID[id].link end
-    self.testLibrary=fixture
+    self.testLibrary=provider;self.testItems={};context.names=names
     return me,names
+end
+local canChoose=S.CanChooseRun
+function S:CanChooseRun()
+    if self.test and self.testSetup then
+        if A.Client:Combat() or not A.Client:ClockReady() then return false,"Finish combat before confirming test content." end
+        if self.testGroup and (not A.Client:InGroup() or not A:IsLeader()) then return false,"Only the group leader chooses the shared test content." end
+        if not self.testGroup and A.Client:InGroup() then return false,"Leave the group before confirming a solo test." end
+        return true
+    end
+    return canChoose(self)
+end
+local function invoke(provider,key,...)
+    if not provider or type(provider[key])~="function" then return end
+    local ok,value=pcall(provider[key],provider,...);if ok then return value end
+end
+function S:TestContentItems(selected)
+    local rows=invoke(self.testLibrary,"Search",{max=1000000});local ids,seen={},{}
+    if type(rows)~="table" then return end
+    for _,row in ipairs(rows) do
+        local id=type(row)=="table" and (tonumber(row.id) or (type(row.link)=="string" and tonumber(row.link:match("item:(%d+)")))) or tonumber(row)
+        if self.Integer(id,1,2147483647) and not seen[id] then
+            for _,source in ipairs(invoke(self.testLibrary,"GetSources",id) or {}) do
+                if selected[source.instance] then seen[id]=true;ids[#ids+1]=id;break end
+            end
+        end
+    end
+    table.sort(ids);local items={}
+    for i=1,math.min(8,#ids) do
+        local id=table.remove(ids,math.random(#ids));local name=invoke(self.testLibrary,"GetName",id) or invoke(self.testLibrary,"GetInfo",id)
+        if type(name)=="table" then name=name.name end
+        if type(name)~="string" or name=="" then name="Item "..id end
+        local link=invoke(self.testLibrary,"GetLink",id) or ("|cffffffff|Hitem:"..id.."::::::::|h["..name.."]|h|r")
+        items[#items+1]={id=id,name=name,link=link}
+    end
+    return items
+end
+local confirmSetup=S.ConfirmPugSetup
+function S:ConfirmPugSetup(...)
+    if not self.testSetup then return confirmSetup(self,...) end
+    local ok,why=self:CanChooseRun();if not ok then return false,why end
+    local selected=self.setupSelection or {};local count=0
+    for name in pairs(selected) do if not self.setupKnown[name] then return false,"Refresh the dungeon/raid list." end;count=count+1 end
+    if count<1 or count>50 then return false,"Select 1–50 dungeons or raids for the test." end
+    local limit=tonumber(self.setup.limit:GetText())
+    if not self.Integer(limit,1,6) then return false,"Choose 1–6 shared reserves per player." end
+    local items=self:TestContentItems(selected)
+    if not items or #items==0 then return false,"No loot was found for that content. Refresh the catalogue or choose another dungeon/raid." end
+    local group=self.testGroup;local me=A.me;local names=self.testContext.names
+    self.testItems=items
+    self.session=self:New(me,(group and "sr-group-test:" or "sr-test:")..tostring(A.Client:ServerTime())..":"..tostring(math.random(100000,999999)),limit)
+    local state=self.session
+    if group then self.groupTestSerial=math.max(self.groupTestSerial or 0,A.Client:ServerTime()%99999900)+1 end
+    state.generation=group and self.groupTestSerial or 1;state.selectedInstances=A.Copy(selected);state.autoCollectLoot=false;state.lootEntries={};state.pugQueue={};state.lootSequences={};state.nextLootID=10
+    for i=1,(group and 1 or 16) do
+        local picks={}
+        if i~=16 then for n=1,limit do picks[n]=items[i==1 and 1 or ((i+n-2)%#items+1)].id end end
+        self:Reserve(state,names[i],picks,group and "group-test" or "solo-test")
+    end
+    local now=A.Client:ServerTime()
+    for i=1,10 do
+        local item=items[i<=2 and 1 or ((i-2)%#items+1)]
+        state.lootEntries[i]={id=i,guid="Item-SRTest-"..i,link=item.link,holder=me,status="collected",kind="timed",seconds=i==1 and 480 or i==2 and 300 or 3600+i*60,maxSeconds=7200,observedAt=now,verifiedHolder=true}
+    end
+    if self.PrepareTestScenario then
+        local prepared,message=self:PrepareTestScenario(state)
+        if prepared==false then self.session=nil;return false,message end
+    end
+    self.testSetup=nil;self.setup:Hide()
+    self:StartCatalogue();self:CatalogueStep()
+    self:ShowPugSetup();self:Publish()
+    self:Print((group and "GROUP" or "SOLO").." SOFTRES TEST: selected content, "..limit.." reserves per player and 10 simulated loot copies. Awards and delivery are simulated. /nrt leave-test exits.")
+    return true
 end
 function S:StartTest(group)
     if A.Client:InGroup() and not group then return self:StartGroupTest() end
@@ -58,34 +123,30 @@ function S:StartTest(group)
     if self.session or A.state or A.demo or A.recoveryPending then return false,"End the current session, council test or recovery before starting the SoftRes test." end
     if not A:Name("player") then return false,"Player identity is not available yet." end
     if group then A:RefreshRoster();if not A:IsLeader() then return false,"Only the group leader starts a shared SoftRes test." end end
-    local me,names=self:PrepareTestContext(group)
-    self.session=self:New(me,(group and "sr-group-test:" or "sr-test:")..tostring(A.Client:ServerTime())..":"..tostring(math.random(100000,999999)),2)
-    local s=self.session
-    if group then self.groupTestSerial=math.max(self.groupTestSerial or 0,A.Client:ServerTime()%99999900)+1 end
-    s.generation=group and self.groupTestSerial or 1;s.selectedInstances={["SoftRes Test Raid"]=true};s.autoCollectLoot=false;s.lootEntries={};s.pugQueue={};s.lootSequences={};s.nextLootID=10
-    for i=1,(group and 1 or 16) do
-        local picks=i==16 and {} or {self.testItems[(i-1)%8+1].id,self.testItems[i==1 and 1 or i%8+1].id}
-        self:Reserve(s,names[i],picks,group and "group-test" or "solo-test")
+    if not library(A) then return false,"Enable AtlasLoot Forever with Dungeons and Raids, or ItemDB, to choose test content." end
+    self:PrepareTestContext(group);self.testSetup=true
+    local ok,why=self:ShowPugSetup(2)
+    if not ok then self:StopTest(true);return false,why end
+    self.setup.TitleText:SetText((group and "GROUP TEST" or "SOLO TEST").." · Choose Dungeons / Raids")
+    if self.setup.resume then self.setup.resume:Hide() end
+    if self.setup.srTestExitHook~=true then
+        self.setup.srTestExitHook=true
+        self.setup:HookScript("OnHide",function() if S.test and S.testSetup then S:StopTest() end end)
     end
-    local now=A.Client:ServerTime()
-    for i=1,10 do
-        local item=self.testItems[i<=2 and 1 or ((i-2)%8+1)]
-        s.lootEntries[i]={id=i,guid="Item-SRTest-"..i,link=item.link,holder=me,status="collected",kind="timed",seconds=i==1 and 480 or i==2 and 300 or 3600+i*60,maxSeconds=7200,observedAt=now,verifiedHolder=true}
-    end
-    self:StartCatalogue();while self.catalogueJobs do self:CatalogueStep() end
-    self:ShowPugSetup();self:Publish()
-    if group then
-        self:Print("GROUP SOFTRES TEST: group members reserve and roll on simulated loot. Real bags, item trades and saved history are disabled. The leader ends the shared test; members can leave locally with /nrt leave-test.")
-    else self:Print("SOLO SOFTRES TEST: 20 simulated players and 10 loot copies. Review reservations, Lock reservations, then open Loot and Queue an item. Sample players roll automatically; use MS / OS to roll locally. Awards and delivery are simulated. /nrt softres leave-test exits.") end
+    self:Render();self:Print("Choose the test dungeon/raid and reserve limit, then confirm. Cancel exits without starting a session.")
     return true
 end
 function S:StopTest(quiet)
     if not self.test then return false,"No SoftRes test is running." end
     local context=self.testContext
-    self.session=nil;self.test=nil;self.testGroup=nil;self.testContext=nil;self.testDB=nil;self.testPlayers=nil;self.testLibrary=nil;self.testItems=nil
+    self.session=nil;self.test=nil;self.testGroup=nil;self.testSetup=nil;self.testContext=nil;self.testDB=nil;self.testPlayers=nil;self.testLibrary=nil;self.testItems=nil
     for frame in pairs(self.managerFrames or {}) do frame:Hide() end
-    for _,key in ipairs({"rollUI","copyPicker","importUI","ui"}) do if self[key] then self[key]:Hide() end end
+    for _,key in ipairs({"setup","rollUI","copyPicker","importUI","ui"}) do if self[key] then self[key]:Hide() end end
     restore(self,context.cache);restore(A,context.base)
+    if self.setup then
+        self.setup.TitleText:SetText(context.setupTitle or "Nause Raid Tools - SR Setup")
+        if self.setup.resume then self.setup.resume:Show() end
+    end
     for _,saved in ipairs(context.titles) do saved.label:SetText(saved.text) end
     if A.ui and A.ui.confirmation and A.ui.confirmation:IsShown() then A.ui.confirmation:Hide() end
     A.confirmationContext=nil
@@ -159,7 +220,7 @@ S.events:SetScript("OnEvent",function(frame,kind,...)
         if kind=="GROUP_ROSTER_UPDATE" or kind=="PLAYER_ENTERING_WORLD" then
             if S.testGroup then
                 A:RefreshRoster()
-                if not A.Client:InGroup() or not S.session or S.session.owner~=A.leader then S:StopTest() else S:Render() end
+                if not A.Client:InGroup() or (S.session and S.session.owner or S.testContext.base.leader.value)~=A.leader then S:StopTest() else S:Render() end
             elseif A.Client:InGroup() then S:StopTest() end
         elseif S.testGroup and kind=="CHAT_MSG_SYSTEM" then return event(frame,kind,...) end
         return
@@ -223,5 +284,5 @@ end)
 local setupRender=S.RenderSessionSetup
 function S:RenderSessionSetup(...)
     setupRender(self,...)
-    if self.sessionSetup and self.test and self:IsHost() then self.sessionSetup.status:SetText((self.testGroup and "GROUP TEST · " or "SOLO TEST · ")..self.sessionSetup.status:GetText()) end
+    if self.sessionSetup and self.test and not self.testSetup and self:IsHost() then self.sessionSetup.status:SetText((self.testGroup and "GROUP TEST · " or "SOLO TEST · ")..self.sessionSetup.status:GetText()) end
 end

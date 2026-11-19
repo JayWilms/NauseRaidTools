@@ -76,7 +76,12 @@ function S:ShowBrowser(...)
     local value=show(self,...)
     if self.browser and not self.browser.catalogueSearchHooked then
         self.browser.catalogueSearchHooked=true
-        self.browser.search:SetScript("OnTextChanged",function() S.browserPage=1;S.searchDue=A.Client:Uptime()+.15 end)
+        self.browser.search:SetScript("OnTextChanged",function()
+            if S.browser.search:GetText()~="" then
+                if S.browserMode~="search" then S.browserSearchReturnMode=S.browserMode end;S.browserMode="search";S.browserInstance=nil;S.browserBoss=nil
+            elseif S.browserMode=="search" then S.browserMode=S.browserSearchReturnMode or "all" end
+            S.browserPage=1;S.searchDue=A.Client:Uptime()+.15
+        end)
     end
     return value
 end

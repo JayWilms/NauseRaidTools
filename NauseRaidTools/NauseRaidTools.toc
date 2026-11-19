@@ -2,7 +2,7 @@
 ## Title: Nause Raid Tools
 ## Notes: Loot council, loot tracking, trade timers and raid loot tools.
 ## Author: Joshua Wilmshurst
-## Version: 0.12.0-alpha.81
+## Version: 0.12.0-alpha.84
 ## SavedVariables: NauseRaidToolsDB
 Core.lua
 Client.lua

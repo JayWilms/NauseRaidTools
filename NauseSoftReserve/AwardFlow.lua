@@ -122,11 +122,21 @@ function S:ReviewPugAward()
     if not self:IsHost() then return false,"Only the hosting leader can award." end
     local r=self.session.round
     if not r or not r.closed or #r.winners~=1 then return false,"Close rolling and resolve ties before confirming an award." end
-    local popup=S:ShowConfirmation("NAUSE_SR_CONFIRM_AWARD",r.winners[1],r.item)
+    local entry=r.lootEntry and self.LootEntry and self:LootEntry(r.lootEntry)
+    local link=entry and entry.link
+    if not link and A.ItemLibrary then
+        local library=A:ItemLibrary()
+        if library and type(library.GetLink)=="function" then
+            local ok,value=pcall(library.GetLink,library,r.item)
+            if ok and type(value)=="string" then link=value end
+        end
+    end
+    local item=self:ReservationItemText(r.item,link)
+    local popup=S:ShowConfirmation("NAUSE_SR_CONFIRM_AWARD",self:PlayerText(r.winners[1]),item)
     if popup then popup.data={sid=self.session.id,key=self:RollKey(),winner=r.winners[1],roll=r.best} end
     return popup~=nil
 end
-StaticPopupDialogs.NAUSE_SR_CONFIRM_AWARD={text="Confirm %s as winner of item %s? This records the award and consumes one SR for an SR win. Delivery will be tracked separately.",button1="Confirm award",button2="Cancel",timeout=0,whileDead=true,hideOnEscape=true,
+StaticPopupDialogs.NAUSE_SR_CONFIRM_AWARD={text="Confirm %s as winner of:\n%s\n\nThis records the award and consumes one SR for an SR win. Delivery will be tracked separately.",button1="Confirm award",button2="Cancel",timeout=0,whileDead=true,hideOnEscape=true,
  OnAccept=function(dialog)
     local d=dialog.data;local r=S.session and S.session.round
     if not d or not S:IsHost() or S.session.id~=d.sid or S:RollKey()~=d.key or not r or not r.closed or #r.winners~=1 or r.winners[1]~=d.winner or r.best~=d.roll then S:Print("Award changed. Review it again.");return end

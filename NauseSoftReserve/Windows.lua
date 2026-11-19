@@ -35,7 +35,7 @@ function S:RenderSessionSetup()
     if not self:IsHost() then f:Hide();return end
     local s=self.session;local instances={}
     for name in pairs(s.selectedInstances or {}) do instances[#instances+1]=name end;table.sort(instances)
-    f.status:SetText((s.locked and "|cffffcf70Locked|r" or "|cff6fe39cOpen|r").."  ·  "..s.limit.." reserves per player  ·  Host: "..s.owner)
+    f.status:SetText(self:ColoredText(s.locked and "Locked" or "Open",s.locked and "attention" or "ready").."  ·  "..s.limit.." reserves per player  ·  Host: "..self:PlayerText(s.owner))
     f.scope:SetText(#instances>0 and table.concat(instances,", ") or s.raidName or "Saved session")
     f.lock:SetText(s.locked and "Unlock reservations" or "Lock reservations");f.lock:SetEnabled(not s.round)
     local all,seen={},{};local total,submitted,offlineCount=0,0,0
@@ -51,7 +51,7 @@ function S:RenderSessionSetup()
         if filter=="All" or (filter=="Missing" and A.roster[name] and not s.reserves[name])
             or (filter=="Submitted" and s.reserves[name]~=nil) or (filter=="Offline" and offline) then names[#names+1]=name end
     end
-    f.summary:SetText(submitted.."/"..total.." submitted   ·   "..(total-submitted).." missing   ·   "..offlineCount.." offline")
+    f.summary:SetText(self:ColoredText(submitted.."/"..total.." submitted","ready").."   ·   "..self:ColoredText((total-submitted).." missing",total>submitted and "attention" or "muted").."   ·   "..self:ColoredText(offlineCount.." offline","muted"))
     for _,control in ipairs(f.filters) do control:SetEnabled(control.filter~=filter) end
     for i=1,math.max(#f.rows,#names) do
         local row=f.rows[i]
@@ -59,8 +59,8 @@ function S:RenderSessionSetup()
         local name=names[i];local picks=name and s.reserves[name]
         local color,offline;if name then color,offline=self:PlayerPresentation(name) end
         row.name:SetText(name or "");row.name:SetTextColor(color and color.r or .90,color and color.g or .91,color and color.b or .93)
-        row.state:SetText(name and ((not A.roster[name] and "Not in raid · " or offline and "Offline · " or "")..(picks and ("Submitted · "..#picks.."/"..s.limit) or "Missing submission")) or "")
-        row.state:SetTextColor(picks and .58 or 1,picks and .78 or .72,picks and .65 or .35)
+        row.state:SetText(name and ((not A.roster[name] and self:ColoredText("Not in raid · ","muted") or offline and self:ColoredText("Offline · ","muted") or "")..(picks and ("Submitted · "..#picks.."/"..s.limit) or "Missing submission")) or "")
+        self:SetTextRole(row.state,picks and "ready" or "attention")
         for n,item in ipairs(row.items) do
             local id=picks and picks[n]
             if item.itemID~=id and GameTooltip and GameTooltip.IsOwned and GameTooltip:IsOwned(item) then GameTooltip:Hide() end
@@ -92,15 +92,12 @@ function S:ShowPugSetup(limit)
         self:InstallManagerNavigation(f,"Overview")
         f.scope=self:UILabel(f,"",20,-92,810,true);f.scope:SetHeight(30);f.scope:SetMaxLines(2)
         f.status=self:UILabel(f,"",20,-128,810)
-        f.summary=self:UILabel(f,"",20,-157,810,true)
-        f.lock=button(f,"Lock reservations",20,-188,205,function() return S:Command(S.session.locked and "unlock" or "lock") end)
+        f.summary=self:UILabel(f,"",20,-157,810)
+        f.lock=button(f,"Lock reservations",20,-188,195,function() return S:Command(S.session.locked and "unlock" or "lock") end)
         f.lock:SetBackdropBorderColor(.75,.57,.18,1)
-        button(f,"My reservations",235,-188,205,function() S:ShowBrowser();return true end)
-        f.more=button(f,"More actions",650,-188,180,function()
-            S:SelectMenu(f.more,{{"Refresh session","sync"},{"Import Softres.it","import"}},function(action)
-                if action=="sync" then S:Command("sync") else S:ShowImport() end
-            end);return true
-        end)
+        button(f,"My reservations",225,-188,195,function() S:ShowBrowser();return true end)
+        f.import=button(f,"Import Softres.it",430,-188,195,function() return S:ShowImport() end)
+        f.refresh=button(f,"Refresh session",635,-188,195,function() return S:Command("sync") end)
         self:UISection(f,-226)
         f.filters={}
         for i,name in ipairs({"All","Missing","Submitted","Offline"}) do
@@ -112,8 +109,8 @@ function S:ShowPugSetup(limit)
         f.empty=self:UILabel(f,"",30,-300,750)
         f.page=self:UILabel(f,"",20,-548,810);f.page:SetTextColor(.60,.63,.68)
         self:UISection(f,-578)
-        button(f,"Loot",20,-596,150,function() A:ShowLootWindow("timer");return true end)
-        button(f,"Trade timers",180,-596,150,function() A:ShowLootTimers();return true end)
+        local reopen=self:UILabel(f,"/nrt softres reopens your session window.",20,-604,600)
+        self:SetTextRole(reopen,"muted")
         local endRun=button(f,"End session",650,-596,180,function() S:ShowConfirmation("NAUSE_SR_END_RUN");return true end)
         endRun:SetBackdropBorderColor(.50,.25,.25,1)
         local elapsed=0

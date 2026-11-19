@@ -86,6 +86,10 @@ local meta;meta={__index=function(t,k) return function(self,...)
     if k=="Hide" then self.shown=false end
     if k=="GetStringHeight" then return 500 end
     if k=="GetWidth" then return 600 end
+    if k=="SetHeight" then self.height=(...) end
+    if k=="GetHeight" then return rawget(self,"height") or 122 end
+    if k=="GetVerticalScroll" then return rawget(self,"offset") or 0 end
+    if k=="SetVerticalScroll" then self.offset=(...) end
     if k=="SetScript" then local key,fn=...;self.scripts=rawget(self,"scripts") or {};self.scripts[key]=fn end
 end end}
 CreateFrame=function() return setmetatable({countdown=false,TitleText=setmetatable({},meta)},meta) end
@@ -308,7 +312,7 @@ check(S:Begin(2),"leader table start failed")
 S.session.locked=true;S:Command("roll 271215")
 S.events.scripts.OnEvent(nil,"CHAT_MSG_SYSTEM","Leader rolls 50 (1-100)")
 S.events.scripts.OnEvent(nil,"CHAT_MSG_SYSTEM","Leader rolls 99 (1-100)")
-check(S.leaderRollUI and S.leaderRollUI.rows[2][1].text:find("(1)",1,true),"additional roll row missing")
+check(S.leaderRollUI and S.leaderRollUI.rows[2][1].text:find("(roll 2)",1,true),"additional roll row missing")
 check(S.leaderRollUI.rows[2][5].text:find("allowance",1,true),"extra roll not flagged")
 S:Command("cancel");S:Command("end")
 
@@ -327,7 +331,7 @@ check(combined.round.attemptCounts[base.me]==20,"per-player log is unbounded")
 
 check(S:Begin(2),"sync round setup failed")
 S.session.locked=true;S:Command("roll 271215")
-for _,file in ipairs({"RollUI.lua"}) do assert(loadfile(root..file,"t",env))("NauseSoftReserve",peer) end
+for _,file in ipairs({"UIComponents.lua","RollUI.lua"}) do assert(loadfile(root..file,"t",env))("NauseSoftReserve",peer) end
 local function latestSnapshot()
     for i=#sent,1,-1 do if sent[i].packet.action=="snapshot" then return copy(sent[i].packet) end end
 end

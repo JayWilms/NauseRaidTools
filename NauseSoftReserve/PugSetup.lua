@@ -24,6 +24,16 @@ function S:ApplyPreview(session,preview)
     end end end
     return apply(self,session,preview)
 end
+local preview=S.Preview
+function S:Preview(text,session,resolve)
+    local result,why=preview(self,text,session,resolve)
+    if result and session.selectedInstances then
+        for _,row in ipairs(result.rows) do for _,id in ipairs(row.items) do
+            if not self:ScopeAllows(session,id) then result.issues[#result.issues+1]="Item "..id.." is outside the selected dungeons/raids." end
+        end end
+    end
+    return result,why
+end
 local new=S.New
 function S:New(owner,id,limit)
     local s,why=new(self,owner,id,limit)
@@ -63,10 +73,6 @@ local show=S.ShowBrowser
 function S:ShowBrowser(...)
     if self.session and self.session.selectedInstances and not self.session.selectedInstances[self.browserInstance] then self.browserInstance=nil end
     show(self,...)
-    self.browser.useForRun:SetShown(not (self.session and self.session.selectedInstances))
-    if self.session and self.session.selectedInstances then
-        self.browser.help:SetText("Use + / − to choose items across the selected content. Submit saves your choices.")
-    end
 end
 local choose=S.ChooseRun
 function S:ConfirmPugSetup()
@@ -86,21 +92,119 @@ function S:ConfirmPugSetup()
     self.setup:Hide();self:Print("PuG Run started. "..limit.." shared reserves per player across "..n.." selected instances.")
     return true
 end
-function S:RefreshPugSetup()
-    local rows=invoke(A:ItemLibrary(),"GetInstances")
-    self.setupInstances={};self.setupKnown={}
-    for _,row in ipairs(type(rows)=="table" and rows or {}) do
-        if type(row.name)=="string" and not self.setupKnown[row.name] then self.setupKnown[row.name]=true;self.setupInstances[#self.setupInstances+1]=row.name end
+local levelFilters={{"All level ranges","all"},{"Levels 1-9",1},{"Levels 10-19",10},{"Levels 20-29",20},{"Levels 30-39",30},{"Levels 40-49",40},{"Levels 50-59",50},{"Levels 60+",60},{"Level unavailable","unknown"}}
+local function levelKey(name)
+    return tostring(name or ""):lower():gsub("^the%s+",""):gsub("[^%w]",""):gsub("stormwindstockades","stockade"):gsub("stockades$","stockade"):gsub("alcazislandprison","alcazprison")
+end
+function S:ReadSetupLevelRange(row)
+    local low,high=tonumber(row.minLevelSuggestion),tonumber(row.maxLevelSuggestion)
+    if not self.Integer(low,1,1000) then low=tonumber(row.minLevel) end
+    if not self.Integer(high,1,1000) then high=tonumber(row.maxLevel) end
+    if not self.Integer(low,1,1000) then low=nil end
+    if not self.Integer(high,1,1000) then high=nil end
+    local range=row.levelRange
+    if type(range)=="string" then local a,b=range:match("(%d+)%D+(%d+)");low=low or tonumber(a);high=high or tonumber(b)
+    elseif type(range)=="table" then
+        if range[3]~=nil then
+            -- AtlasLoot: { minimum entry, recommended minimum, recommended maximum }.
+            -- Match ContentProto:GetName(), which displays values 2 and 3.
+            low,high=tonumber(range[2]),tonumber(range[3])
+        else low=low or tonumber(range[1]);high=high or tonumber(range[2]) end
     end
-    table.sort(self.setupInstances);self:RenderPugSetup()
+    local raid=row.isRaid==true or (tonumber(row.maxNumPlayers) or 0)>5
+    if self.Integer(low,1,1000) and not self.Integer(high,1,1000) and raid then high=low end
+    if self.Integer(low,1,1000) and self.Integer(high,low,1000) then return {min=low,max=high,raid=raid} end
+end
+function S:NativeSetupLevelInfo()
+    local names,maps={},{}
+    local function merge(target,key,range)
+        if not key then return end
+        local old=target[key]
+        if old then old.min=math.min(old.min,range.min);old.max=math.max(old.max,range.max);old.raid=old.raid or range.raid
+        else target[key]={min=range.min,max=range.max,raid=range.raid} end
+    end
+    -- Read the client's activity suggestions, without joining or filtering a queue.
+    -- Forever's raid category is 114; 3 supports clients using the older category.
+    for _,category in ipairs({2,114,3}) do
+        local ok,ids=A.Client:Call("C_LFGList.GetAvailableActivities",category)
+        for _,id in ipairs(ok and type(ids)=="table" and ids or {}) do
+            local valid,info=A.Client:Call("C_LFGList.GetActivityInfoTable",id)
+            local range=valid and type(info)=="table" and self:ReadSetupLevelRange(info)
+            if range then
+                range.raid=range.raid or category~=2
+                if type(info.fullName)=="string" then merge(names,levelKey(info.fullName),range) end
+                if type(info.shortName)=="string" and info.shortName~="" then merge(names,levelKey(info.shortName),range) end
+                if self.Integer(info.mapID,1,1000000) then merge(maps,info.mapID,range) end
+            end
+        end
+    end
+    return names,maps
+end
+function S:RefreshPugSetup()
+    local rows=invoke(A:ItemLibrary(),"GetInstances");local names,maps=self:NativeSetupLevelInfo()
+    local atlasLevels={};local atlas=self.AtlasItemLibrary and self:AtlasItemLibrary()
+    for _,row in ipairs(invoke(atlas,"GetInstances") or {}) do
+        local range=self:ReadSetupLevelRange(row)
+        if range then atlasLevels[levelKey(row.name)]=range end
+    end
+    self.setupInstances={};self.setupKnown={};self.setupLevels={}
+    for _,row in ipairs(type(rows)=="table" and rows or {}) do
+        if type(row)=="table" and type(row.name)=="string" and not self.setupKnown[row.name] then
+            self.setupKnown[row.name]=true;self.setupInstances[#self.setupInstances+1]=row.name
+            local key=levelKey(row.name)
+            local range=atlasLevels[key] or self:ReadSetupLevelRange(row) or maps[row.mapID] or names[key]
+            if not range and #key>=8 then
+                -- A catalogue can combine wings that the game lists separately.
+                for activity,value in pairs(names) do if activity:sub(1,#key)==key then
+                    if range then range.min=math.min(range.min,value.min);range.max=math.max(range.max,value.max);range.raid=range.raid or value.raid
+                    else range={min=value.min,max=value.max,raid=value.raid} end
+                end end
+            end
+            self.setupLevels[row.name]=range
+        end
+    end
+    table.sort(self.setupInstances,function(a,b)
+        local x,y=self.setupLevels[a],self.setupLevels[b]
+        if (x and x.min or 10000)~=(y and y.min or 10000) then return (x and x.min or 10000)<(y and y.min or 10000) end
+        if (x and x.max or 10000)~=(y and y.max or 10000) then return (x and x.max or 10000)<(y and y.max or 10000) end
+        return a<b
+    end)
+    self:RenderPugSetup()
+end
+function S:SetupInstanceLabel(name)
+    local range=self.setupLevels and self.setupLevels[name]
+    return (range and ((range.min==range.max and ("Level "..range.min) or ("Levels "..range.min.."-"..range.max)).." · ") or "Level unavailable · ")..name..(range and range.raid and " (Raid)" or "")
+end
+function S:FilteredSetupInstances()
+    local rows={};local filter=self.setupLevelFilter or "all"
+    for _,name in ipairs(self.setupInstances or {}) do
+        local range=self.setupLevels and self.setupLevels[name]
+        if filter=="all" or (filter=="unknown" and not range)
+            or (type(filter)=="number" and range and range.min<=(filter==60 and 1000 or (filter==1 and 9 or filter+9)) and range.max>=filter) then rows[#rows+1]=name end
+    end
+    return rows
+end
+function S:OpenSetupInstanceMenu()
+    local f=self.setup;local choices={}
+    for _,name in ipairs(self:FilteredSetupInstances()) do choices[#choices+1]={((self.setupSelection or {})[name] and "[x] " or "[ ] ")..self:SetupInstanceLabel(name),name} end
+    if #choices==0 then return false,"No dungeons/raids match this level range. Choose another range or Refresh." end
+    if not A.ui then A:BuildUI() end
+    A:OpenSettingsDropdown(f.instance,choices,function(name)
+        if S.setupKnown[name] then S.setupSelection[name]=not S.setupSelection[name] or nil;S:RenderPugSetup() end
+    end,575)
+    return true
 end
 function S:RenderPugSetup()
     local f=self.setup;if not f then return end
-    local rows=self.setupInstances or {};local pages=math.max(1,math.ceil(#rows/10));self.setupPage=math.min(self.setupPage or 1,pages)
-    for i,b in ipairs(f.rows) do local name=rows[(self.setupPage-1)*10+i];b.instance=name;b:SetShown(name~=nil);if name then b:SetText((self.setupSelection[name] and "[X] " or "[ ] ")..name) end end
-    local selected={};for name in pairs(self.setupSelection or {}) do selected[#selected+1]=name end;table.sort(selected)
-    f.status:SetText(#rows==0 and "Loot catalogue unavailable. Enable AtlasLoot Forever with Dungeons and Raids, or ItemDB, then Refresh." or ("Page "..self.setupPage.."/"..pages.." — "..#selected.." selected"))
-    f.selected:SetText(table.concat(selected,", "))
+    local rows=self:FilteredSetupInstances();local selected={}
+    for _,name in ipairs(self.setupInstances or {}) do if (self.setupSelection or {})[name] then selected[#selected+1]=self:SetupInstanceLabel(name) end end
+    local filterName="All level ranges";for _,row in ipairs(levelFilters) do if row[2]==(self.setupLevelFilter or "all") then filterName=row[1] end end
+    f.levelRange:SetText(filterName);f.instance:SetText(#rows==0 and "No matching dungeons/raids" or "Choose dungeons / raids")
+    f.instance:SetEnabled(#rows>0);f.clear:SetEnabled(next(self.setupSelection or {})~=nil)
+    f.status:SetText(#(self.setupInstances or {})==0 and "Loot catalogue unavailable. Enable AtlasLoot Forever with Dungeons and Raids, or ItemDB, then Refresh." or (#selected.." selected · "..#rows.." matching dungeons/raids · Listed by level"))
+    f.selected:SetText(#selected>0 and table.concat(selected,"\n") or "Nothing selected. Choose a level range, then add a dungeon or raid above.")
+    f.selectedContent:SetHeight(math.max(110,f.selected:GetStringHeight()+8));f.selectedScroll:SetVerticalScroll(math.min(f.selectedScroll:GetVerticalScroll(),math.max(0,f.selectedContent:GetHeight()-f.selectedScroll:GetHeight())))
+    if A.RefreshScrollChrome then A:RefreshScrollChrome(f.selectedScroll) end
 end
 function S:ShowPugSetup(limit)
     local ok,why=self:CanChooseRun();if not ok then self:Print(why);return false,why end
@@ -111,22 +215,29 @@ function S:ShowPugSetup(limit)
         table.insert(UISpecialFrames,"NausePugSetup")
         local function label(y) local l=f:CreateFontString(nil,"OVERLAY","GameFontNormal");l:SetPoint("TOPLEFT",20,y);l:SetWidth(575);l:SetJustifyH("LEFT");return l end
         label(-40):SetText("Select every instance included in this run. The reservation limit is shared.")
-        f.status=label(-69);f.rows={}
+        f.status=label(-69);f.status:SetHeight(28)
         local function button(text,x,y,w,fn)
             local b=S:CreateUIFrame("Button",nil,f,"UIPanelButtonTemplate");b:SetSize(w,25);b:SetPoint("TOPLEFT",x,y);b:SetText(text)
             b:SetScript("OnClick",function() local yes,message=fn();if message then S:Print(message) end;S:RenderPugSetup() end);return b
         end
-        for i=1,10 do f.rows[i]=button("",20,-95-(i-1)*27,575,function() local name=f.rows[i].instance;if name then S.setupSelection[name]=not S.setupSelection[name] or nil end;return true end) end
-        button("Previous",20,-372,100,function() S.setupPage=math.max(1,S.setupPage-1);return true end)
-        button("Next",125,-372,100,function() S.setupPage=S.setupPage+1;return true end)
-        button("Refresh",230,-372,100,function() S:RefreshPugSetup();return true end)
-        label(-410):SetText("Shared reserves per player (1–6):")
-        f.limit=S:CreateUIFrame("EditBox",nil,f,"InputBoxTemplate");f.limit:SetSize(40,24);f.limit:SetPoint("TOPLEFT",360,-405);f.limit:SetAutoFocus(false);f.limit:SetNumeric(true);f.limit:SetMaxLetters(1)
-        f.selected=label(-440)
-        button("Confirm and open reservations",20,-515,360,function() return S:ConfirmPugSetup() end)
-        button("Cancel",400,-515,195,function() f:Hide();return true end)
+        label(-102):SetText("Level range")
+        f.levelRange=self:UIDropdownButton(f,"",20,-122,575,function()
+            S:SelectMenu(f.levelRange,levelFilters,function(value) S.setupLevelFilter=value;S:RenderPugSetup() end);return true
+        end)
+        label(-164):SetText("Dungeon / raid — select again to add or remove")
+        f.instance=self:UIDropdownButton(f,"",20,-184,575,function() return S:OpenSetupInstanceMenu() end)
+        label(-224):SetText("Selected content")
+        f.selectedScroll=self:CreateUIFrame("ScrollFrame",nil,f,"UIPanelScrollFrameTemplate");f.selectedScroll:SetPoint("TOPLEFT",20,-244);f.selectedScroll:SetSize(550,122)
+        f.selectedContent=self:CreateUIFrame("Frame",nil,f.selectedScroll);f.selectedContent:SetSize(530,122);f.selectedScroll:SetScrollChild(f.selectedContent)
+        f.selected=self:UILabel(f.selectedContent,"",0,0,525);self:SetTextRole(f.selected,"body")
+        button("Refresh",20,-377,165,function() S:RefreshPugSetup();return true end)
+        f.clear=button("Clear selected",195,-377,165,function() S.setupSelection={};return true end)
+        label(-421):SetText("Shared reserves per player (1-6):")
+        f.limit=S:CreateUIFrame("EditBox",nil,f,"InputBoxTemplate");f.limit:SetSize(40,24);f.limit:SetPoint("TOPLEFT",360,-416);f.limit:SetAutoFocus(false);f.limit:SetNumeric(true);f.limit:SetMaxLetters(1)
+        f.confirm=button("Confirm and open reservations",20,-515,360,function() return S:ConfirmPugSetup() end)
+        f.cancel=button("Cancel",400,-515,195,function() f:Hide();return true end)
     end
-    self.setupSelection={};self.setupPage=1;self.setup.limit:SetText(tostring(limit or 1))
+    self.setupSelection={};self.setupLevelFilter="all";self.setupPage=1;self.setup.limit:SetText(tostring(limit or 1))
     self:RefreshPugSetup();self.setup:Show()
     if self.runChooser then self.runChooser:Hide() end
     return true
