@@ -5,7 +5,7 @@ root=Path(__file__).resolve().parent.parent
 lua=LuaRuntime(unpack_returned_tuples=True)
 lua.execute('A={}')
 for module in ('LootConfiguration','NativeLoot'):
-    lua.execute((root/'SanguineLootTools'/f'{module}.lua').read_text(),'SanguineLootTools',lua.globals().A)
+    lua.execute((root/'NauseRaidTools'/f'{module}.lua').read_text(),'NauseRaidTools',lua.globals().A)
 lua.execute('''
 local defaults=A:DefaultLootConfiguration()
 assert(defaults.minimum==nil)

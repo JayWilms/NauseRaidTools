@@ -4,7 +4,7 @@ import sys
 sys.path.insert(0,str(Path(__file__).parent/'test-deps'))
 from lupa.lua51 import LuaRuntime
 ROOT=Path(__file__).resolve().parent.parent
-SRC=ROOT/'SanguineLootTools'
+SRC=ROOT/'NauseRaidTools'
 tree=ast.parse((ROOT/'qa/check_reason_dropdown.py').read_text(encoding='utf-8'))
 FRAMES=next(ast.literal_eval(n.value) for n in tree.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='FRAMES' for t in n.targets))
 
@@ -12,7 +12,7 @@ def setup():
     lua=LuaRuntime(unpack_returned_tuples=True)
     lua.execute(FRAMES+'\nSlashCmdList={}\n')
     for name in ['Core','Features','Archive','Awards','SettingsUI','UI']:
-        lua.execute((SRC/f'{name}.lua').read_text(encoding='utf-8'),'SanguineLootTools',lua.globals().A)
+        lua.execute((SRC/f'{name}.lua').read_text(encoding='utf-8'),'NauseRaidTools',lua.globals().A)
     lua.execute('''
 A.Client={ServerTime=function() return 100000 end}
 A.me='Zergulx-WildGrowth';A.leader=A.me
@@ -58,7 +58,7 @@ assert(A.ui.correctionEligibility:GetText()=='Eligibility: Alpha-Realm')
 assert(A.ui.correctionReason:GetText()=='Awarded to the wrong player')
 assert(A.ui.correctReview:IsEnabled())
 A.ui.correctReview:Click()
-assert(confirmation.kind=='SANGUINELOOTCOUNCIL_CORRECT_AWARD')
+assert(confirmation.kind=='NAUSERAIDTOOLS_CORRECT_AWARD')
 assert(confirmation.data.target=='Alpha-Realm' and confirmation.data.reason=='Awarded to the wrong player')
 assert(confirmation.data.expectedRevision==2 and item.winner=='Hozfir-WildGrowth')
 A.ui.correctionTargetDropdown:Click();A.ui.correction:Hide()

@@ -6,7 +6,7 @@ local function move(object,parent,x,y,width,height)
 end
 local pageOrder={"Session","Loot Configuration","Responses","Council","Alerts","Profiles","Advanced"}
 local pageDescriptions={["Loot Configuration"]="Choose what is collected, who receives automatic assignments and why.",Session="Manage this raid and its response rounds.",Responses="Configure raid choices and personalise your colours.",Council="Assign loot authority and set council voting rules.",Alerts="Control trade-expiry warnings and sounds.",Profiles="Reuse your raid configuration.",Advanced="Recovery and diagnostics for when you need them."}
-local togglePath="Interface\\AddOns\\SanguineLootTools\\Assets\\"
+local togglePath="Interface\\AddOns\\NauseRaidTools\\Assets\\"
 local function switch(control)
     control:SetSize(76,26);control:SetBackdrop(nil)
     control:GetHighlightTexture():SetAlpha(0);control:GetPushedTexture():SetAlpha(0)
@@ -18,7 +18,7 @@ local function switch(control)
     control.knob:SetTexture(togglePath.."ToggleKnob.tga");control.knob:SetPoint("LEFT",7,0)
     local label=control:GetFontString();label:ClearAllPoints();label:SetPoint("LEFT",49,0);label:SetPoint("RIGHT",0,0)
     label:SetJustifyH("RIGHT");label:SetMaxLines(1)
-    control.sltToggle=true
+    control.nrtToggle=true
 end
 local function switchValue(control,on)
     on=on==true
@@ -32,7 +32,7 @@ local function switchValue(control,on)
 end
 function A:SetSettingsToggle(control,on) switchValue(control,on) end
 function A:BuildSettingsUI(u,window,text,button,edit)
-    local hub=window("SanguineLootCouncilSettings","Sanguine Loot Tools  |  Settings",1000,720)
+    local hub=window("NauseRaidToolsSettings","Nause Raid Tools  |  Settings",1000,720)
     u.settingsHub=hub;u.settingsPages={};u.settingsTabs={};u.settingsScrolls={};u.settingsPositions={};u.settingsRows={};u.settingsSections={}
     u.settingsStatus=text(hub,"",11,22,-61,950);u.settingsStatus:SetHeight(28);u.settingsStatus:SetMaxLines(2)
     u.settingsHeading=text(hub,"Session",18,210,-105,700)
@@ -52,7 +52,7 @@ function A:BuildSettingsUI(u,window,text,button,edit)
     end
     -- Decorative branding never captures input or participates in page scrolling.
     u.settingsLogo=hub:CreateTexture(nil,"ARTWORK")
-    u.settingsLogo:SetTexture("Interface\\AddOns\\SanguineLootTools\\Assets\\SLTMonogram.tga", "CLAMP", "CLAMP", "LINEAR")
+    u.settingsLogo:SetTexture("Interface\\AddOns\\NauseRaidTools\\Assets\\NRTMonogram.tga", "CLAMP", "CLAMP", "LINEAR")
     if u.settingsLogo.SetSnapToPixelGrid then u.settingsLogo:SetSnapToPixelGrid(false) end
     if u.settingsLogo.SetTexelSnappingBias then u.settingsLogo:SetTexelSnappingBias(0) end
     u.settingsLogo:SetSize(158,158);u.settingsLogo:SetPoint("TOPLEFT",22,-400)
@@ -190,7 +190,7 @@ function A:BuildSettingsUI(u,window,text,button,edit)
         r.label:SetScript("OnEnterPressed",function() r.save:Click() end)
         r.save=button(raid,"Rename",0,0,60,function() local v=A:ResponseOptions()[i];if v then A:EditResponse(i,"update",{label=r.label:GetText(),color=v.color}) end;r.label:ClearFocus();A:RenderSettings() end)
         r.enabled=button(raid,"",0,0,76,function() local v=A:ResponseOptions()[i];if v then A:EditResponse(i,"enabled",not v.enabled) end end);switch(r.enabled)
-        r.delete=button(raid,"×",0,0,28,function() local popup=A:ShowConfirmation("SANGUINELOOTCOUNCIL_DELETE_RESPONSE");if popup then popup.data={sid=A.state and A.state.id or false,id=A:ResponseOptions()[i].id,revision=A:RaidConfigurationRevision()} end end)
+        r.delete=button(raid,"×",0,0,28,function() local popup=A:ShowConfirmation("NAUSERAIDTOOLS_DELETE_RESPONSE");if popup then popup.data={sid=A.state and A.state.id or false,id=A:ResponseOptions()[i].id,revision=A:RaidConfigurationRevision()} end end)
         self:StyleCrossButton(r.delete)
         r.color=button(personal,"",0,0,180,function() end)
         r.color.swatch=r.color:CreateTexture(nil,"ARTWORK");r.color.swatch:SetPoint("LEFT",8,0);r.color.swatch:SetSize(20,20)
@@ -199,7 +199,7 @@ function A:BuildSettingsUI(u,window,text,button,edit)
         r.color:SetScript("OnClick",function(_,mouse) A:CloseSettingsDropdown();local v=A:ResponseOptions()[i];if not v then return end;if mouse=="RightButton" then A:SetPersonalResponseColor(v.id,nil) else A:PickResponseColor(v.id) end end)
     end
     u.addResponse=button(raid,"+ Add response",0,0,180,function() A:EditResponse(0,"add") end)
-    u.resetResponses=button(raid,"Restore raid choices",0,0,180,function() local popup=A:ShowConfirmation("SANGUINELOOTCOUNCIL_RESET_RESPONSES");if popup then popup.data={sid=A.state and A.state.id or false,revision=A:RaidConfigurationRevision()} end end)
+    u.resetResponses=button(raid,"Restore raid choices",0,0,180,function() local popup=A:ShowConfirmation("NAUSERAIDTOOLS_RESET_RESPONSES");if popup then popup.data={sid=A.state and A.state.id or false,revision=A:RaidConfigurationRevision()} end end)
     u.personalColorsDivider=divider(responses,0)
     u.personalColorsHeading=u.responseSections.personal.title
     u.personalColorsHelp=description(personal,"Click a swatch to choose; right-click to reset. Colours save automatically for your character.",0)
@@ -217,7 +217,7 @@ function A:BuildSettingsUI(u,window,text,button,edit)
     section(profiles,"Saved raid profiles",0)
     description(profiles,"Profiles store shared raid configuration. Your personal response colours stay with your character.",30)
     u.profileSelector=button(profiles,"Select a profile",0,0,260,function() end)
-    dropdown(u.profileSelector,function() local choices={};for n in pairs(SanguineLootCouncilDB.profiles or {}) do choices[#choices+1]={n,n} end;table.sort(choices,function(a,b) return a[1]<b[1] end);return choices end,function(n) u.profileName:SetText(n);u.profileSelector:SetText(n) end)
+    dropdown(u.profileSelector,function() local choices={};for n in pairs(NauseRaidToolsDB.profiles or {}) do choices[#choices+1]={n,n} end;table.sort(choices,function(a,b) return a[1]<b[1] end);return choices end,function(n) u.profileName:SetText(n);u.profileSelector:SetText(n) end)
     position(u.profileSelector,profiles,0,95,function(w) return w end,30)
     position(u.profileName,profiles,0,180,function(w) return w end,30);u.profileName.hint:Hide();label(profiles,"Profile name",145)
     for i,key in ipairs({"saveProfile","loadProfile","deleteProfile"}) do local index=i;position(u[key],profiles,function(w) return (index-1)*(w+10)/3 end,240,function(w) return (w-20)/3 end,30) end
@@ -233,7 +233,7 @@ function A:BuildSettingsUI(u,window,text,button,edit)
     u.settingsDiagnostics=button(advanced,"Open diagnostics",0,-340,180,function() A:ShowDiagnostics() end)
     description(advanced,"View the local diagnostic report. Recording remains opt-in; nothing is uploaded automatically.",390);advanced:SetHeight(480)
     -- Keep operational item utilities with Loot; the launcher owns window navigation.
-    u.itemTools=window("SanguineLootCouncilItemTools","Add loot",620,170,true)
+    u.itemTools=window("NauseRaidToolsItemTools","Add loot",620,170,true)
     move(u.itemInput,u.itemTools,20,90,430);move(u.add,u.itemTools,465,90,130);u.itemInput.hint:Hide()
     text(u.itemTools,"Shift-click a single item in your bags, then Add loot and Queue.",12,20,-55,570)
     move(u.correctAward,u.main,250,580,140)
@@ -246,7 +246,7 @@ function A:BuildSettingsUI(u,window,text,button,edit)
         if not A:IsMaster() then u.itemTools:Hide();return end
         u.itemToolsReturnSession=A.state and A.state.id
         loot.window:Hide()
-        if u.itemTools.sltCollapsed then A:ToggleWindowCollapse(u.itemTools) end
+        if u.itemTools.nrtCollapsed then A:ToggleWindowCollapse(u.itemTools) end
         u.itemTools:ClearAllPoints()
         u.itemTools:SetPoint("TOP",UIParent,"TOP",0,-70)
         u.itemTools:Raise()
@@ -261,7 +261,7 @@ function A:BuildSettingsUI(u,window,text,button,edit)
     for _,key in ipairs({"myResponses","deliveries","settings","votingRules","session","config","rules"}) do u[key]:Hide() end
     u.readiness:SetScript("OnClick",function() A:StartAddonCheck(true) end);u.readiness:SetText("Version Check")
     u.recheck:SetScript("OnClick",function() A:StartAddonCheck(true) end)
-    u.tradeAlerts=window("SanguineLootCouncilTradeAlerts","Trade time warning",570,310)
+    u.tradeAlerts=window("NauseRaidToolsTradeAlerts","Trade time warning",570,310)
     u.tradeAlertScroll=A:CreateScrollFrame(u.tradeAlerts);u.tradeAlertScroll:SetPoint("TOPLEFT",20,-55);u.tradeAlertScroll:SetSize(505,185)
     u.tradeAlertChild=CreateFrame("Frame",nil,u.tradeAlertScroll);u.tradeAlertChild:SetSize(480,185);u.tradeAlertScroll:SetScrollChild(u.tradeAlertChild)
     u.tradeAlertText=text(u.tradeAlertChild,"",12,0,0,475);u.tradeAlertText:SetJustifyV("TOP")
@@ -376,7 +376,7 @@ function A:LayoutSettings()
         group.title:SetWidth(body-280)
         group.access:ClearAllPoints();group.access:SetPoint("RIGHT",-46,0);group.access:SetWidth(200)
         group.arrow:ClearAllPoints();group.arrow:SetPoint("TOPRIGHT",-1,-1);group.arrow:SetSize(34,34)
-        if type(group.arrow.sltArrowParts)~="table" then self:StyleRailArrow(group.arrow,1) end
+        if type(group.arrow.nrtArrowParts)~="table" then self:StyleRailArrow(group.arrow,1) end
         self:SetRailArrowDirection(group.arrow,open and -1 or 1)
         local contentHeight=key=="raid" and (74+count*44+48) or (40+math.ceil(count/3)*42)
         at(group.body,0,sectionY+46,body,contentHeight);group.body:SetShown(open)
@@ -425,7 +425,7 @@ function A:RenderRaidSetupSummary()
     for name in pairs(c.council) do names[#names+1]=name end
     table.sort(names)
     local thresholds={[2]="Green+",[3]="Blue+",[4]="Epic+",[5]="Legendary only"}
-    local profile=self.state and "Session configuration" or SanguineLootCouncilDB.raidSetup.profile or "Custom setup"
+    local profile=self.state and "Session configuration" or NauseRaidToolsDB.raidSetup.profile or "Custom setup"
     local members={}
     for i=1,math.min(2,#names) do members[#members+1]=self:DisplayName(names[i]) end
     local memberSummary=#names>0 and (table.concat(members,", ")..(#names>2 and (" +"..(#names-2).." more • Council tab") or "")) or "No council members configured."
@@ -445,7 +445,7 @@ function A:RenderSettingsPresentation()
         ((self.demo and self:TestLabel() or "Active session").."   |   Your role: "..role.."   |   Master Looter: "..self:DisplayName(s.master)))
     u.settingsAccess:SetText(not s and "Edit your saved raid setup here, even while solo. It is used only when you start a session as Raid Leader." or self:IsLeader() and "Raid settings are controlled by you. Display preferences and colours affect only your character." or "Raid settings: view only — Raid Leader controls. Your display preferences and response colours remain editable.")
     u.responseEditNotice:SetText(not s and "Saved raid setup • edit choices for your next session as Raid Leader. Personal colours remain separate." or self:ResponseConfigEditable() and "Raid Leader controls • names, order and visibility apply to future response rounds." or self:IsLeader() and "Raid Leader only • choices are locked during active rounds. Finish or reset them before editing." or "View only • the Raid Leader controls names, order and visibility.")
-    switchValue(u.autoMaster,not self.demo and (s and s.masterAutoSync or (not s and SanguineLootCouncilDB.masterAutoSync~=false)))
+    switchValue(u.autoMaster,not self.demo and (s and s.masterAutoSync or (not s and NauseRaidToolsDB.masterAutoSync~=false)))
     switchValue(u.lootPanels.timer.auto,s and s.autoCollect~=false or not s)
     switchValue(u.selfVotes,self:RaidSettings().selfVotes)
     local cfg=self:WarningSettings();switchValue(u.warningTrade,cfg.trade);switchValue(u.warningSound,cfg.sound);switchValue(u.lockWindows,self:WindowPositionsLocked());u.lockWindows:SetEnabled(true);u.resetWindows:SetEnabled(true)
@@ -583,17 +583,17 @@ function A:RenderTradeAlerts(show)
     if #lines==0 then self.ui.tradeAlerts:Hide() elseif show then self.ui.tradeAlerts:Show() end
 end
 
-A.confirmationDialogs["SANGUINELOOTCOUNCIL_DELETE_RESPONSE"]={text="Delete this response from future items? Existing rounds and history keep their recorded responses.",button1="Delete",button2="Cancel",timeout=0,whileDead=true,hideOnEscape=true,
+A.confirmationDialogs["NAUSERAIDTOOLS_DELETE_RESPONSE"]={text="Delete this response from future items? Existing rounds and history keep their recorded responses.",button1="Delete",button2="Cancel",timeout=0,whileDead=true,hideOnEscape=true,
     OnAccept=function(dialog)
         local c=dialog.data
         if not c or c.sid~=(A.state and A.state.id or false) or c.revision~=A:RaidConfigurationRevision() then return end
         for i,v in ipairs(A:ResponseOptions()) do if v.id==c.id then A:EditResponse(i,"delete");return end end
     end}
-A.confirmationDialogs["SANGUINELOOTCOUNCIL_RESET_RESPONSES"]={text="Restore BIS, Upgrade, Minor Upgrade, Off-Spec, PvP and Pass for future items?",button1="Restore",button2="Cancel",timeout=0,whileDead=true,hideOnEscape=true,
+A.confirmationDialogs["NAUSERAIDTOOLS_RESET_RESPONSES"]={text="Restore BIS, Upgrade, Minor Upgrade, Off-Spec, PvP and Pass for future items?",button1="Restore",button2="Cancel",timeout=0,whileDead=true,hideOnEscape=true,
     OnAccept=function(dialog) local c=dialog.data;if c and c.sid==(A.state and A.state.id or false) and c.revision==A:RaidConfigurationRevision() then A:EditResponse(0,"reset") end end}
 
 function A:BuildPersonalColorUI(u,window,text,button,edit)
-    u.personalColor=window("SanguineLootCouncilPersonalColor","Response colour",500,340,true)
+    u.personalColor=window("NauseRaidToolsPersonalColor","Response colour",500,340,true)
     local f=u.personalColor;f:SetFrameStrata("FULLSCREEN_DIALOG")
     text(f,"Personal colours save automatically. Cancel restores your previous colour.",11,20,-47,460)
     u.personalColorChannels={}
@@ -607,7 +607,7 @@ function A:BuildPersonalColorUI(u,window,text,button,edit)
     -- Cover the native wheel's stair-stepped perimeter with a smooth charcoal
     -- rim. This is a non-interactive texture; native wheel/value input stays intact.
     local rim=wheel:CreateTexture(nil,"OVERLAY",nil,-1)
-    rim:SetTexture("Interface/AddOns/SanguineLootTools/Assets/ColourWheelRim.tga")
+    rim:SetTexture("Interface/AddOns/NauseRaidTools/Assets/ColourWheelRim.tga")
     rim:SetPoint("TOPLEFT",-2,2);rim:SetSize(204,204)
     u.personalColorRim=rim
     local marker=wheel:CreateTexture(nil,"OVERLAY")
@@ -650,7 +650,7 @@ end
 function A:RenderMasterSettings()
     if not self.ui or not self.ui.masterStatus then return end
     local s=self.state
-    local following=s and s.masterAutoSync or (not s and SanguineLootCouncilDB.masterAutoSync~=false)
+    local following=s and s.masterAutoSync or (not s and NauseRaidToolsDB.masterAutoSync~=false)
     self.ui.autoMaster:SetEnabled(self:CanConfigureRaid() and not self.demo)
     switchValue(self.ui.autoMaster,following and not self.demo)
     local name,status=self:ReadGameMaster()

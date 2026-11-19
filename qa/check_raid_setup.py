@@ -10,7 +10,7 @@ A={}; SlashCmdList={}
 modules=['Core','Features','Voting','ResponseConfig','Responses','LootConfiguration','Warnings','MasterLooter']
 def load():
     for name in modules:
-        lua.execute((root/'SanguineLootTools'/f'{name}.lua').read_text(encoding='utf-8'),'SanguineLootTools',lua.globals().A)
+        lua.execute((root/'NauseRaidTools'/f'{name}.lua').read_text(encoding='utf-8'),'NauseRaidTools',lua.globals().A)
 
 load()
 lua.execute('''
@@ -61,7 +61,7 @@ assert(saved.warningSettings.sound and saved.warningSettings.early==1200)
 assert(saved.lootConfiguration.minimum==nil and saved.lootConfiguration.collection==false)
 assert(saved.lootConfiguration.openWindow and saved.lootConfiguration.automatic)
 assert(saved.lootConfiguration.rules[3].target=='Council-Realm')
-assert(SanguineLootCouncilDB.profiles['Prepared raid'])
+assert(NauseRaidToolsDB.profiles['Prepared raid'])
 -- Joining alone must not apply a session. Starting is still leader-only.
 A.Client.ready=true;A.Client.raid=true;A.Client.group=true
 A.roster={['Leader-Realm']='raid1',['Master-Realm']='raid2',['Council-Realm']='raid3',['Raider-Realm']='raid4'}
@@ -79,8 +79,8 @@ assert(s.warningSettings.sound and s.warningSettings.urgent==240)
 assert(not s.autoCollect and s.lootConfiguration.minimum==nil and s.lootConfiguration.openWindow)
 assert(s.lootConfiguration.automatic and s.lootConfiguration.rules[3].note=='Prepared solo')
 -- Filtering absent members for this raid must not erase the prepared defaults.
-assert(SanguineLootCouncilDB.raidSetup.council['Absent-Realm'])
-s.rules.limit=1;assert(SanguineLootCouncilDB.raidSetup.rules.limit==3)
+assert(NauseRaidToolsDB.raidSetup.council['Absent-Realm'])
+s.rules.limit=1;assert(NauseRaidToolsDB.raidSetup.rules.limit==3)
 A.me='Raider-Realm';assert(not A:CanConfigureRaid())
 assert(not A:SaveLootConfiguration(A:LootConfiguration()))
 assert(not A:EditResponse(1,'label','Unauthorized'))
@@ -88,7 +88,7 @@ assert(not A:Reduce(A.me,{op='responseDuration',sid=s.id,duration=10}))
 -- A missing automatic-assignment recipient pauses automation for that session.
 A.state=nil;A.me='Leader-Realm';A.roster['Council-Realm']=nil
 assert(A:Reduce(A.me,{op='start'}));assert(not A.state.lootConfiguration.automatic)
-assert(SanguineLootCouncilDB.lootConfiguration.automatic)
+assert(NauseRaidToolsDB.lootConfiguration.automatic)
 ''')
 print('Solo setup edits, profiles, SavedVariables reload, leader-only session start, settings transfer, absent members/recipients and live non-leader restrictions passed.')
 

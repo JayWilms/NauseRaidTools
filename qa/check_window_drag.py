@@ -12,7 +12,7 @@ function UIParent:GetWidth() return self.width end
 function UIParent:GetHeight() return self.height end
 function UIParent:GetEffectiveScale() return self.scale end
 ''')
-lua.execute((root/'SanguineLootTools/WindowLayouts.lua').read_text(encoding='utf-8'), 'SanguineLootTools', lua.globals().A)
+lua.execute((root/'NauseRaidTools/WindowLayouts.lua').read_text(encoding='utf-8'), 'NauseRaidTools', lua.globals().A)
 lua.execute('''
 local store={}
 function A:WindowLayoutStore() return store end
@@ -21,7 +21,7 @@ function A:FocusWindow() end
 function A:IsReadableWindow() return false end
 local function near(a,b) assert(math.abs(a-b)<.00001,tostring(a)..' ~= '..tostring(b)) end
 function frame()
-    local f={x=300,y=200,width=400,height=300,scripts={},sltWindowName='test'}
+    local f={x=300,y=200,width=400,height=300,scripts={},nrtWindowName='test'}
     function f:GetPoint() return 'TOPLEFT',UIParent,'TOPLEFT',self.x,-self.y end
     function f:GetWidth() return self.width end
     function f:GetHeight() return self.height end
@@ -56,7 +56,7 @@ for _,scale in ipairs({.64,.8,1,1.25}) do
     assert(store.test==nil);near(f.x,450);near(f.y,275)
     -- Include final mouse travel between the last frame and button release.
     mouseX=500+170*scale;mouseDown=false;f.scripts.OnUpdate(f)
-    near(f.x,470);near(f.y,275);assert(not f.sltMoving)
+    near(f.x,470);near(f.y,275);assert(not f.nrtMoving)
     near(store.test.x,470);near(store.test.y,-275)
     local saved=store.test;A:FinishWindowMove(f);assert(store.test==saved)
     assert(previousUpdates==3,'existing OnUpdate handler lost')
@@ -83,12 +83,12 @@ for _,scale in ipairs({.64,.8,1,1.25}) do
     local left,top=f.x,f.y;mouseX=mouseX+100;f.scripts.OnUpdate(f)
     near(f.x,left);near(f.y,top)
     A:BeginWindowMove(f);f.locked=true;f.scripts.OnUpdate(f)
-    assert(not f.sltMoving);assert(not A:BeginWindowMove(f));f.locked=false
+    assert(not f.nrtMoving);assert(not A:BeginWindowMove(f));f.locked=false
     -- Scale changes finish without applying deltas from the old coordinate space.
     A:BeginWindowMove(f);left,top=f.x,f.y
     UIParent.scale=scale+.1;mouseX,mouseY=9000,9000;A:FinishWindowMove(f)
     near(f.x,left);near(f.y,top)
-    UIParent.scale=scale;f.sltResizing=true;assert(not A:BeginWindowMove(f));f.sltResizing=false
+    UIParent.scale=scale;f.nrtResizing=true;assert(not A:BeginWindowMove(f));f.nrtResizing=false
     mouseX=0/0;assert(not A:BeginWindowMove(f))
 end
 ''')

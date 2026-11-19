@@ -3,13 +3,13 @@ import sys
 sys.path.insert(0,str(Path(__file__).parent/'test-deps'))
 from lupa.lua51 import LuaRuntime
 ROOT=Path(__file__).resolve().parent.parent
-SRC=ROOT/'SanguineLootTools'
+SRC=ROOT/'NauseRaidTools'
 
 def setup():
     lua=LuaRuntime(unpack_returned_tuples=True)
     lua.execute('A={}')
     for name in ['Core','Features','Archive','Voting','ResponseConfig','Responses','Items','Loot','Warnings','RaiderUI']:
-        lua.execute((SRC/f'{name}.lua').read_text(encoding='utf-8'),'SanguineLootTools',lua.globals().A)
+        lua.execute((SRC/f'{name}.lua').read_text(encoding='utf-8'),'NauseRaidTools',lua.globals().A)
     lua.execute('''
 A.Client={Combat=function() return false end,ServerTime=function() return 100000 end}
 A.me='Master-Realm';A.leader=A.me;A.roster={[A.me]='player',['Winner-Realm']='raid2'}

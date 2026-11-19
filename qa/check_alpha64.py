@@ -1,11 +1,11 @@
 from pathlib import Path
 from lupa.lua51 import LuaRuntime
 
-source = Path(__file__).resolve().parent.parent / 'SanguineLootTools'
+source = Path(__file__).resolve().parent.parent / 'NauseRaidTools'
 lua = LuaRuntime(unpack_returned_tuples=True)
 lua.execute('A = {}')
 for name in ('Client', 'Core', 'Archive', 'Items', 'CouncilUI', 'History'):
-    lua.execute((source / f'{name}.lua').read_text(encoding='utf-8'), 'SanguineLootTools', lua.globals().A)
+    lua.execute((source / f'{name}.lua').read_text(encoding='utf-8'), 'NauseRaidTools', lua.globals().A)
 
 lua.execute(r'''
 local requested = {}
@@ -81,7 +81,7 @@ assert(A:Name('NPC') == 'Alex-River' and not A:Name('party2'))
 assert(A:Resolve('Alex') == nil and A:Resolve('Alex-LegacyRealm') == nil)
 assert(A:Resolve('alex river') == 'Alex-River' and A:Resolve('Alex-Stone') == 'Alex-Stone')
 assert(A:DisplayName('Alex-Stone') == 'Alex-Stone')
-SanguineLootCouncilDB = {history={
+NauseRaidToolsDB = {history={
     {key='legacy', winner='Alex-LegacyRealm'},
     {key='stone', winner='Alex-Stone'},
     {key='river', winner='Alex-River'},

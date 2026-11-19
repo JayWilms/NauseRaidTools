@@ -5,7 +5,7 @@ sys.path.insert(0, str(Path(__file__).parent / 'test-deps'))
 from lupa.lua51 import LuaRuntime
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / 'SanguineLootTools'
+SRC = ROOT / 'NauseRaidTools'
 
 MOCK = r'''
 now, allowance, allowanceAt, failures, sent = 0, serverTokens, 0, 0, {}
@@ -70,7 +70,7 @@ def setup(old=False, players=5, tokens=10, rate=1, blocked=0):
     lua.execute(MOCK)
     for name in ['Core','Features','Archive','Voting','ResponseConfig','Responses','Items','Loot','WireCodec','StateDelta','Network']:
         file = ROOT / f'qa/fixtures/{name}-alpha35.lua' if old and name in ('Network','StateDelta') else SRC / f'{name}.lua'
-        lua.execute(file.read_text(encoding='utf-8'), 'SanguineLootTools', g.A)
+        lua.execute(file.read_text(encoding='utf-8'), 'NauseRaidTools', g.A)
     lua.execute(CLIENT)
     lua.execute(FIXTURE)
     return lua

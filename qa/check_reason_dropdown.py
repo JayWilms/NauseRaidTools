@@ -3,7 +3,7 @@ import sys
 sys.path.insert(0,str(Path(__file__).parent/'test-deps'))
 from lupa.lua51 import LuaRuntime
 ROOT=Path(__file__).resolve().parent.parent
-SRC=ROOT/'SanguineLootTools'
+SRC=ROOT/'NauseRaidTools'
 
 FRAMES=r'''
 A={confirmationDialogs={}}
@@ -72,7 +72,7 @@ function ClickDropdownRow(row)
     row:Click()
 end
 UIParent=CreateFrame('Frame')
-SanguineLootCouncilDB={raidSetupRevision=0}
+NauseRaidToolsDB={raidSetupRevision=0}
 '''
 BUILD=r'''
 function A:StylePanel() end
@@ -82,8 +82,8 @@ function A:CanConfigureRaid() return true end
 function A:Print(message) error(message) end
 function A:Act(op,p)
     assert(op=='lootConfiguration')
-    SanguineLootCouncilDB.lootConfiguration=p.settings
-    SanguineLootCouncilDB.raidSetupRevision=SanguineLootCouncilDB.raidSetupRevision+1
+    NauseRaidToolsDB.lootConfiguration=p.settings
+    NauseRaidToolsDB.raidSetupRevision=NauseRaidToolsDB.raidSetupRevision+1
     return true
 end
 function A:SetupMemberName(name) return name end
@@ -100,9 +100,9 @@ local function dropdown(control,choices,action)
 end
 A.roster={};A.ui={settingsHub=CreateFrame('Frame',nil,UIParent),settingsPages={['Loot Configuration']={content=CreateFrame('Frame',nil,UIParent)}},lootPanels={timer={auto=CreateFrame('Button',nil,UIParent)}}}
 A:BuildLootConfigurationUI(A.ui,window,text,button,edit,dropdown,function() end,nil,function() end,function() end)
-A.ui.settingsHub.sltBody=CreateFrame('Frame',nil,A.ui.settingsHub)
-A.ui.settingsHub.sltHeader=CreateFrame('Frame',nil,A.ui.settingsHub)
-A.ui.settingsHub.sltBody:Hide()
+A.ui.settingsHub.nrtBody=CreateFrame('Frame',nil,A.ui.settingsHub)
+A.ui.settingsHub.nrtHeader=CreateFrame('Frame',nil,A.ui.settingsHub)
+A.ui.settingsHub.nrtBody:Hide()
 '''
 
 def setup(old=False):
@@ -111,7 +111,7 @@ def setup(old=False):
     g=lua.globals()
     for name in ['Features','LootConfiguration','WindowLayouts','SettingsUI','LootConfigurationUI']:
         path=ROOT/f'qa/fixtures/{name}-alpha37.lua' if old and name in ('SettingsUI','LootConfigurationUI') else SRC/f'{name}.lua'
-        lua.execute(path.read_text(encoding='utf-8'),'SanguineLootTools',g.A)
+        lua.execute(path.read_text(encoding='utf-8'),'NauseRaidTools',g.A)
     lua.execute(BUILD)
     return lua
 
@@ -133,9 +133,9 @@ for i,label,stored in [(1,'Disenchanted','Disenchant'),(2,'Guild Bank','Guild Ba
     lua.execute(f'ClickDropdownRow(A.ui.settingsDropdown.rows[{i}])')
     assert lua.eval('A.ui.lootReasonPreset:GetText()')==label
     lua.execute("A.ui.lootReasonRecipient:SetText('Hozfir-WildGrowth');A.ui.lootReasonNote:SetText('Raid test');A.ui.lootReasonSave:Click()")
-    assert lua.eval('SanguineLootCouncilDB.lootConfiguration.rules[4].reason')==stored
-    assert lua.eval('SanguineLootCouncilDB.lootConfiguration.rules[4].target')=='Hozfir-WildGrowth'
-    assert lua.eval('SanguineLootCouncilDB.lootConfiguration.rules[4].note')=='Raid test'
+    assert lua.eval('NauseRaidToolsDB.lootConfiguration.rules[4].reason')==stored
+    assert lua.eval('NauseRaidToolsDB.lootConfiguration.rules[4].target')=='Hozfir-WildGrowth'
+    assert lua.eval('NauseRaidToolsDB.lootConfiguration.rules[4].note')=='Raid test'
     lua.execute('A:OpenLootReason(4)')
     assert lua.eval('A.ui.lootReasonPreset:GetText()')==label
     print(label+': selected, saved and reopened; recipient/note preserved')

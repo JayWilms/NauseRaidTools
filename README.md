@@ -1,76 +1,55 @@
-# Sanguine Loot Tools
+# Nause Raid Tools
 
-Raid loot management addon for WoW: Forever. Current version: **0.12.0-alpha.70**, protocol **19** (private testing build). Native Master Loot moves eligible automatic assignments without waiting for recipient messages; stacked green materials retain quantities and can merge into existing stacks. Collect for council automatically sends eligible single-copy loot to the actual Master Looter, unawarded, while preserving real bag tracking and trade timers for normal responses and voting. Council stacks remain manual. History recording synchronises in the background and distinguishes native evidence from bag GUID verification. Completed automatic Disenchant and Guild Bank assignments are hidden from active Loot while their history remains available. Early and urgent trade warnings use Alarm Clock 2 (12867), with the existing On/Off switch and no dropdown. A tester reported instant native distribution on alpha.54, with further raid checks continuing. Test response rounds remain 60 seconds.
+Raid loot tools for WoW: Forever. Previously Sanguine Loot Tools.
 
-## New in alpha.70
+**Current testing build: 0.12.0-alpha.78**, protocol 19. Includes **Nause Soft Reserve 0.1.0-experimental.16**. This is an alpha pre-release; multiplayer trade and recovery checks are still in progress.
 
-- /slt brings the launcher to the front even when it is already open.
-- /slt test starts and restarts solo and shared test sessions.
+## Download and install
 
-## New in alpha.69
+Download [the alpha.78 install ZIP](https://github.com/JayWilms/NauseRaidTools/releases/tag/v0.12.0-alpha.78), or use the [repository copy](dist/NauseRaidTools-0.12.0-alpha.78-install.zip).
 
-- If the Raid Leader goes offline, the Master Looter gets first priority to take over. A named, promoted Raid Assistant can take over when both are unavailable. This can work without moving WoW's raid crown.
-- Pre-Raid Loot Check reports addon compatibility, loot roles and whether a backup has a usable copy of the current revision.
-- Display has independent Compact modes for Responses, Voting and Timer. History can export the current filtered results as CSV.
-- Council can suggest tracked loot from Timer. The Master Looter gets a single chat notice per suggested copy and can queue or dismiss it from Loot.
-- Raid chat announcements have separate switches for tracked council loot, opening responses, and awards.
+1. Exit World of Warcraft.
+2. Remove the old SanguineLootTools or SanguineLootCouncil addon folder, if installed.
+3. Extract both `NauseRaidTools` and `NauseSoftReserve` into `Interface/AddOns`, replacing previous copies. Each folder must directly contain its matching `.toc` file.
+4. Enable Nause Raid Tools. Enable Nause Soft Reserve to use the experimental SoftRes system.
+5. For SoftRes item browsing, enable AtlasLoot Forever and its Dungeons and Raids module, or a compatible ItemDB. These separate addons are not bundled.
 
-## Installation
+Use the same build on everyone participating in a session. Nause uses its own saved data; old Sanguine settings are not migrated.
 
-Download the [alpha.70 installer](dist/SanguineLootTools-0.12.0-alpha.70-install.zip). **Update all testers together and start a new normal session:** use alpha.70 on every client (protocol 19). Saved raid setups/profiles are retained; review the Quality Rules before enabling automation. Enable Automatic Collection for council pickup; enable Automatic Awards separately for direct awards. The Quality Rules now control each item quality directly; the separate addon threshold is removed. Both automation paths still require the appropriate game Master Loot threshold. See the [raid testing checklist](TESTING.md). Previous installers remain in `dist`.
+## Loot council
 
-Copy the `SanguineLootTools` folder into your game's `Interface/AddOns` folder. No separate addon dependencies are required. Enable the addon and **Load out of date AddOns** at character selection. Use `/slt` in game to open the launcher.
+`/nrt` opens the launcher. Settings > Session > Set Up Raid guides roles, council, response choices and loot handling. Loot shows the next action for collected items; Timer shows detailed trade countdowns. Voting includes candidate history and gear comparison. Guild Member Help explains personal response colours and window settings.
 
-See [the addon README](SanguineLootTools/README.txt) for upgrade instructions, commands, changes and outstanding in-game checks.
+`/nrt test` starts the existing council simulation; `/nrt leave-test` exits it. This is separate from a normal SoftRes session.
 
-## Alpha.68: Loot session recovery
+## Soft Reserve
 
-Sanguine can recover a confirmed session after a leader reload or a change in raid leadership. One designated Master Looter or council member receives the private ballot backup. If no complete copy matches the newest known session revision, recovery pauses for review. After recovery, automatic collection and awards stay off until the leader checks deliveries and re-enables them.
+- `/nrt softres`: raid leader setup and session overview.
+- `/nrtsr`: player reservations; for the host, opens setup.
+- `/nrt results`: roll results and award controls.
+- `/nrt loot` and `/nrt timer`: collected loot and delivery timers.
 
-## Alpha.67: Optional Transmog response
+Choose content and 1-6 shared reserves per player, accept submissions, then lock reservations. Start rolling from collected loot or enter an item in Results. SR and MS use `/roll 100`; OS uses `/roll 99`. Valid reserved rolls have priority over MS and OS. An SR award consumes one reserve after confirmation. Awards and physical delivery remain separate.
 
-The raid leader can enable Transmog under Settings → Responses → Raid Response Choices → Add Transmog. The response checks the player's own appearance collection, including appearances learned from another item. A collected or unlearnable look disables Transmog only. If collection data is unavailable, the response remains available and is marked Unverified.
+The updated UI shares Overview, Reservations, Rolls and Awards navigation. Overview has submission totals, player filters and a scrollable roster. The browser has item tooltips, dropdown filters, explicit + / - controls and draft status. Roll actions follow the current stage. Council and SoftRes sessions cannot run simultaneously.
 
-## Alpha.66: Master Looter handoff and item previews
+`/nrtsr sync` requests the active host state. `/nrtsr resume` restores the original host's compatible saved session and cancels an interrupted roll. This is separate from council takeover; automatic SoftRes host takeover is not implemented.
 
-The active Master Looter is automatically on the council. The raid leader can use one picker in Settings → Council. Sanguine follows WoW's confirmed Master Looter and uses the saved assignee or raid leader when the game is using another loot method. Handoffs keep the active round and tracked item holders. In Responses, Ctrl-click an item name or icon to preview it in WoW's dressing room, or Shift-click to link it in chat.
+## Testing status
 
-## Alpha.65: Award confirmation, voting ticks and test loot
+All 27 automated suites passed. The finished ZIP also passed extraction, addon manifest, slash command and SoftRes integration checks. Simulations include multiplayer synchronisation and delivery scenarios; they do not establish live game reliability.
 
-Voting clears the confirmation shade before an award advances. The item list shows a yellow tick for your recorded vote and a green tick for an award. Four test items that stayed on “Retrieving item information” were replaced with Walking Stick, Ring of Iron Will, Large Axe and Heavy Mithril Pants.
+The tester confirmed the basic reserve, roll, winner confirmation and reserve-consumption flow in game on alpha.77. Alpha.78 UI spacing, real trades, multiplayer reconnects and council recovery still need in-game review. See [TESTING.md](TESTING.md).
 
-## Alpha.64: Tracked item preloading, vote advance and full names
+## Development
 
-The 27-item test pool includes all three relic types and one recipe each for Alchemy, Blacksmithing, Enchanting, Engineering, Leatherworking and Tailoring. The live recipe filter still supports Cooking, First Aid and Fishing. Tracked loot starts loading item data on arrival, and confirmed votes advance to the next item with a vote available. Forever roster identities use both character names throughout the addon.
+Python with Lupa is required for the automated checks:
 
-## Alpha.62: Forever test loot and recipe visibility
+```text
+python -m pip install -r qa/requirements.txt
+python qa/run_checks.py
+```
 
-Solo and group /slt test now start with 23 Forever items, including four profession recipes. Responses shows a recipe when your character knows its profession at any skill level. Recipes with unresolved profession data stay visible, and Loot and Council still list every recipe.
+`python tools/build_install.py` creates the two-addon install ZIP under `outputs/`. Build only when a release is requested.
 
-## Alpha.61: Native item data
-
-SLT now gets item details from the game and uses class restrictions plus Forever proficiency rules for auto-pass. Unresolved data leaves responses available. Item details load locally, with no extra item data sent over addon comms. Use alpha.61 on every test client. Protocol 17 is retained. See the live Forever checklist in TESTING.md.
-
-## Alpha.60: Quiet loot transfers and cleaner Settings
-
-Routine loot transfers no longer show a loading popup, fragment counters or response loading text. History Sync keeps progress and completion visible. History removes All Players and adds a Select All Shown / Deselect All toggle. A personal Display tab provides window locking, all-window or single-window reset, and Loot Window Auto-Open. Response Timing moves into Responses alongside response choices and personal colours. Settings reclaims header/footer space and shows permission or lock guidance only where needed. All 21 local suites pass; native layout and raid testing remain pending. Protocol 17 is retained.
-
-## Alpha.59: Quality Rules, History and Master Looter controls
-
-Master Looter selection is one typed/roster field. History has compact audits, full inline search guidance, Sync History at the bottom right and crimson selection-based deletion with confirmation. Local deletion can be reversed by an active session or another member's sync copy. Loot Configuration follows per-quality rules directly, without a separate minimum threshold. Automatic Collection and Automatic Awards are adjacent and clearly describe council collection versus direct awards. Actual routing notices remain visible while repeated status text is hidden. All twenty local suites pass; native layout/raid checks remain pending. Protocol 17 requires everyone to update and start a new session.
-
-## Alpha.58: Council and Settings updates
-
-Council membership now uses a raid-member dropdown and Remove button for each member, with Add Council Member underneath. Changes save immediately, replacing a member in one validated action. Duplicate selections are rejected and saved absent members remain removable. Existing leader permissions and voting locks remain. Gold Settings headings capitalize each word, while repeated tab titles and introductions are removed to give controls and the Responses preview more room. All nineteen local suites pass; native layout checks remain pending.
-
-## Alpha.57: History updates
-
-The History window's **Sync History** button merges retained awards across the current raid or party. Regroup after split raids, or invite an absent member back, then have the leader, master looter or configured council member start the sync. Everyone participating needs alpha.56 or newer; alpha.55 does not contain this feature. Progress and unavailable peers are reported. Guild Bank records, corrections and delivery audits are included; green items remain excluded and the newest 500 records are retained. This does not change the active loot session. The search box now shows "Search name, date or item…" inside the empty field. Date format and Shift-click guidance appear in its hover tooltip. History also adds name/date/item search, Shift-clicked item links, My Rewards and a separate Guild Bank view. Green awards no longer use the 500 retained slots; existing known green entries are removed on load. All nineteen local suites pass; native Forever communication and layout checks remain pending.
-
-## Source
-
-The addon source and artwork were originally imported from `SanguineLootTools-0.12.0-alpha.33-install.zip`. Alpha.34 extends the test response countdown to two minutes; alpha.35 adjusts throttle backoff and recovery; alpha.36 reduces loot-release traffic and caps sustainable token refill; alpha.37 corrects fresh unbound pickup detection. The original development tests and build tools were not included in that archive and have not yet been recovered.
-
-## Licence
-
-Private alpha testing terms apply. See [LICENSE.txt](SanguineLootTools/LICENSE.txt).
+See the [main addon notes](NauseRaidTools/README.txt), [SoftRes guide](NauseSoftReserve/README.txt), and [licence](NauseRaidTools/LICENSE.txt). Third-party bundled libraries retain their own licences. Historical installers remain in `dist`.

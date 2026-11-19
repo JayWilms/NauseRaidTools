@@ -14,6 +14,7 @@ checks = [
     'check_trade_timers.py',
     'check_raid_member_pickers.py',
     'check_raid_setup.py',
+    'check_guided_setup.py',
     'check_recovery.py',
     'check_window_drag.py',
     'check_window_layers.py',
@@ -29,6 +30,8 @@ checks = [
     'check_alpha36.py',
     'check_alpha64.py',
     'check_slash_commands.py',
+    'check_manual_loot_links.py',
+    'check_softres.py',
 ]
 for name in checks:
     result = subprocess.run([sys.executable, str(root / 'qa' / name)], cwd=root, capture_output=True, text=True)

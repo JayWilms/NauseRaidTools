@@ -153,7 +153,7 @@ function A:ReduceLoot(sender, p)
         if sender ~= self.leader then return false, "Only the raid leader controls automatic loot collection." end
         s.autoCollect = not s.autoCollect
         local config=self:LootConfiguration();config.collection=s.autoCollect;s.lootConfiguration=config
-        if not self.demo then SanguineLootCouncilDB.lootConfiguration=self.Copy(config) end
+        if not self.demo then NauseRaidToolsDB.lootConfiguration=self.Copy(config) end
         return true
     elseif p.op == "lootReport" then
         if not integer(p.seq, 1, 1000000000) or type(p.entries) ~= "table" then return false, "Invalid loot report." end

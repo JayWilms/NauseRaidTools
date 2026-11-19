@@ -3,13 +3,13 @@ import sys
 sys.path.insert(0,str(Path(__file__).parent/'test-deps'))
 from lupa.lua51 import LuaRuntime
 ROOT=Path(__file__).resolve().parent.parent
-SRC=ROOT/'SanguineLootTools'
+SRC=ROOT/'NauseRaidTools'
 
 def setup():
     lua=LuaRuntime(unpack_returned_tuples=True)
     lua.execute('A={};combat=false;inRange=true;tradeCalls=0;bagGUID="Item-Fresh-Helm"')
     for name in ['Core','Features','Archive','Awards','Equipment','Loot','Trade','CouncilUI']:
-        lua.execute((SRC/f'{name}.lua').read_text(encoding='utf-8'),'SanguineLootTools',lua.globals().A)
+        lua.execute((SRC/f'{name}.lua').read_text(encoding='utf-8'),'NauseRaidTools',lua.globals().A)
     lua.execute(r'''
 A.Client={}
 function A.Client:Invoke(fn,...) if type(fn)~='function' then return false end;return pcall(fn,...) end

@@ -44,7 +44,7 @@ function A:BuildLootConfigurationUI(u,window,text,button,edit,dropdown,position,
         r.reason=button(rules,"Edit reason",0,0,100,function() A:OpenLootReason(index) end)
         r.help=text(rules,"",11,0,0,690);r.help:SetMaxLines(2);r.help:SetHeight(30)
     end
-    u.lootReason=window("SanguineLootToolsLootReason","Automatic assignment reason",560,310,true)
+    u.lootReason=window("NauseRaidToolsLootReason","Automatic assignment reason",560,310,true)
     u.lootReasonTitle=text(u.lootReason,"",14,20,-50,520)
     u.lootReasonPreset=button(u.lootReason,"Choose a reason",20,-85,250,function() end)
     dropdown(u.lootReasonPreset,{{"Disenchant","Disenchant"},{"Guild Bank","Guild Bank"},{"Other","Other"}},function(value) u.lootReasonChoice=value;u.lootReasonPreset:SetText(value) end)
@@ -53,7 +53,7 @@ function A:BuildLootConfigurationUI(u,window,text,button,edit,dropdown,position,
     u.lootReasonNote=edit(u.lootReason,25,-205,510,"Optional note • up to 100 bytes");u.lootReasonNote:SetMaxLetters(100)
     u.lootReasonSave=button(u.lootReason,"Save reason",20,-265,250,function()
         local context=A.lootReasonContext;local state=A.state
-        if not context or not A:CanConfigureRaid() or context.sid~=(state and state.id or false) or context.revision~=(state and state.lootConfigRevision or SanguineLootCouncilDB.raidSetupRevision or 0) then A:Print("Loot settings changed. Reopen Edit reason.");u.lootReason:Hide();return end
+        if not context or not A:CanConfigureRaid() or context.sid~=(state and state.id or false) or context.revision~=(state and state.lootConfigRevision or NauseRaidToolsDB.raidSetupRevision or 0) then A:Print("Loot settings changed. Reopen Edit reason.");u.lootReason:Hide();return end
         local c=A:LootConfiguration();local r=c.rules[context.index]
         if not A:IsLootAwardReason(u.lootReasonChoice) then A:Print("Choose Disenchant, Guild Bank or Other.");return end
         local entered=u.lootReasonRecipient:GetText():match("^%s*(.-)%s*$")
@@ -70,7 +70,7 @@ function A:OpenLootReason(index)
     if not self:CanConfigureRaid() or not self.ui or not self.ui.lootQualityRows[index] then return end
     self:CloseSettingsDropdown()
     local c=self:LootConfiguration();local r=c.rules[index];local u=self.ui
-    self.lootReasonContext={index=index,sid=self.state and self.state.id or false,revision=self.state and self.state.lootConfigRevision or SanguineLootCouncilDB.raidSetupRevision or 0}
+    self.lootReasonContext={index=index,sid=self.state and self.state.id or false,revision=self.state and self.state.lootConfigRevision or NauseRaidToolsDB.raidSetupRevision or 0}
     u.lootReasonRecipient:SetText(r.target=="@master" and "" or r.target)
     u.lootReasonTitle:SetText(qualities[index]);u.lootReasonChoice=r.reason;u.lootReasonPreset:SetText(r.reason~="" and r.reason or "Choose a reason");u.lootReasonNote:SetText(r.note);u.lootReason:Show()
 end

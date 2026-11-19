@@ -2,13 +2,13 @@ from pathlib import Path
 from lupa.lua51 import LuaRuntime
 
 ROOT=Path(__file__).resolve().parent.parent
-SRC=ROOT/'SanguineLootTools'
+SRC=ROOT/'NauseRaidTools'
 
 def setup(ready=True):
     lua=LuaRuntime(unpack_returned_tuples=True)
     lua.execute('A={};SlashCmdList={};function CreateFrame() return {RegisterEvent=function() end,SetScript=function() end} end')
     for name in ['Core','Client','Features','Archive','Awards','Voting','ResponseConfig','Responses','Items','Equipment','StateDelta','WireCodec','Network','CouncilUI']:
-        lua.execute((SRC/f'{name}.lua').read_text(encoding='utf-8'),'SanguineLootTools',lua.globals().A)
+        lua.execute((SRC/f'{name}.lua').read_text(encoding='utf-8'),'NauseRaidTools',lua.globals().A)
     lua.globals().ready=ready
     lua.execute('''
 now=100000
@@ -162,7 +162,7 @@ assert(A:ClassEligibility(uncached,mage)=='Restricted')
 print('Native item data, localized class lists, Forever proficiencies and safe missing-data behavior passed.')
 
 lua=setup()
-lua.execute((SRC/'RaiderUI.lua').read_text(encoding='utf-8'),'SanguineLootTools',lua.globals().A)
+lua.execute((SRC/'RaiderUI.lua').read_text(encoding='utf-8'),'NauseRaidTools',lua.globals().A)
 lua.execute('''
 local function recipe(id, subclass)
     itemFacts[id]={9,subclass,''}
@@ -214,16 +214,16 @@ print('Recipe visibility uses learned professions at skill 1 and keeps unknown r
 
 lua=setup()
 for name in ('LootConfiguration','Warnings'):
-    lua.execute((SRC/f'{name}.lua').read_text(encoding='utf-8'),'SanguineLootTools',lua.globals().A)
+    lua.execute((SRC/f'{name}.lua').read_text(encoding='utf-8'),'NauseRaidTools',lua.globals().A)
 lua.execute('''
-SanguineLootCouncilDB={}
+NauseRaidToolsDB={}
 item.status,item.voting='queued','idle'
 assert(A:EditResponse(0,'addTransmog'))
 local choices=A:ResponseOptions()
 local transmog=choices[#choices-1]
 assert(transmog.label=='Transmog' and transmog.transmog and transmog.enabled and choices[#choices].id==6)
 assert(A:EditResponse(0,'addTransmog') and #A:ResponseOptions()==#choices)
-assert(SanguineLootCouncilDB.responseOptions[#choices-1].transmog)
+assert(NauseRaidToolsDB.responseOptions[#choices-1].transmog)
 assert(A:CleanResponses(A.Decode(A:WireEncode({choices=choices})).choices)[#choices-1].transmog)
 item.responseOptions=nil
 A:StartResponses(item)

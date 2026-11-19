@@ -2,7 +2,7 @@ from pathlib import Path
 from lupa.lua51 import LuaRuntime
 
 ROOT=Path(__file__).resolve().parent.parent
-SRC=ROOT/'SanguineLootTools'
+SRC=ROOT/'NauseRaidTools'
 lua=LuaRuntime(unpack_returned_tuples=True)
 lua.execute('''
 A={confirmationDialogs={},allWindowFrames={}};SlashCmdList={}
@@ -59,7 +59,7 @@ function highest(frame)
 end
 ''')
 for name in ['WindowLayouts','UI','CouncilUI']:
-    lua.execute((SRC/f'{name}.lua').read_text(encoding='utf-8'),'SanguineLootTools',lua.globals().A)
+    lua.execute((SRC/f'{name}.lua').read_text(encoding='utf-8'),'NauseRaidTools',lua.globals().A)
 lua.execute('''
 settings=root();response=root();voting=root();timer=root();correction=root();confirmation=root()
 A.ui={settingsHub=settings,popup=response,main=voting,lootTimers=timer,correction=correction,confirmation=confirmation}
@@ -77,12 +77,12 @@ assert(highest(response)<settings.level)
 -- New or reparented descendants are assigned to their current owner's band.
 late=CreateFrame('Button',nil,response)
 A:RefreshWindowLayers();assert(highest(response)<settings.level)
-late:SetParent(settings);A:RefreshWindowLayers();assert(late.sltFocusRoot==settings)
+late:SetParent(settings);A:RefreshWindowLayers();assert(late.nrtFocusRoot==settings)
 -- Collapsing/reparenting the body must not break the layer grouping.
-settings.sltHeader=CreateFrame('Frame',nil,settings)
-A:CaptureWindowBody(settings);settings.sltBody:Hide()
+settings.nrtHeader=CreateFrame('Frame',nil,settings)
+A:CaptureWindowBody(settings);settings.nrtBody:Hide()
 A:RefreshWindowLayers();assert(highest(response)<settings.level)
-settings.sltBody:Show()
+settings.nrtBody:Show()
 -- Independent windows such as Timer are never hidden to solve overlap.
 timer:Show();assert(timer:IsShown() and settings:IsShown() and response:IsShown())
 assert(highest(settings)<timer.level)
@@ -95,7 +95,7 @@ lua.execute('''
 -- native hide/show sorting can draw behind the background.
 local surface=CreateFrame('Frame',nil,voting)
 A.ui.votingSurface=surface
-voting.sltHeader=CreateFrame('Frame',nil,voting)
+voting.nrtHeader=CreateFrame('Frame',nil,voting)
 voting.resizeGrip=CreateFrame('Button',nil,voting)
 A.ui.selectedLootPane=CreateFrame('Frame',nil,voting)
 A.ui.votingHistory={frame=CreateFrame('Frame',nil,voting)}
@@ -119,7 +119,7 @@ voting.regions={unpack(headings)}
 A:ParentVotingContent()
 for _,r in ipairs(headings) do assert(r.parent==surface and r.text and r.shown) end
 assert(itemIcon.parent==surface and row.parent==surface and summary.parent==surface)
-assert(surface.parent==voting and voting.sltHeader.parent==voting)
+assert(surface.parent==voting and voting.nrtHeader.parent==voting)
 assert(A.ui.selectedLootPane.parent==voting and A.ui.votingHistory.frame.parent==voting)
 assert(voting.resizeGrip.parent==voting)
 for i=1,20 do
@@ -130,9 +130,9 @@ for i=1,20 do
     assert(not itemIcon:IsVisible())
 end
 voting:Show()
-A:CaptureWindowBody(voting);voting.sltBody:Hide()
+A:CaptureWindowBody(voting);voting.nrtBody:Hide()
 assert(not itemIcon:IsVisible())
-voting.sltBody:Show();A:RefreshWindowLayers()
+voting.nrtBody:Show();A:RefreshWindowLayers()
 assert(itemIcon:IsVisible() and row:IsVisible() and summary:IsVisible())
 ''')
 print('Voting content stays above its background through repeated reopen, focus and collapse/expand cycles.')
@@ -140,18 +140,18 @@ print('Voting content stays above its background through repeated reopen, focus 
 lua.execute('''
 voting:Show();correction:Show()
 assert(correction.strata=='FULLSCREEN_DIALOG' and voting.strata=='DIALOG')
-assert(voting.sltDialogBlocker:IsShown())
-assert(voting.sltDialogBlocker.level>voting.level+200)
-confirmation.sltDialogOwner=correction;confirmation:Show()
-assert(correction.sltDialogBlocker:IsShown())
+assert(voting.nrtDialogBlocker:IsShown())
+assert(voting.nrtDialogBlocker.level>voting.level+200)
+confirmation.nrtDialogOwner=correction;confirmation:Show()
+assert(correction.nrtDialogBlocker:IsShown())
 assert(highest(correction)<confirmation.level)
 A:FocusWindow(voting)
 assert(highest(correction)<confirmation.level,'parent click raised a window through its active confirmation')
 confirmation:Hide()
-assert(not correction.sltDialogBlocker:IsShown())
-assert(voting.sltDialogBlocker:IsShown())
+assert(not correction.nrtDialogBlocker:IsShown())
+assert(voting.nrtDialogBlocker:IsShown())
 correction:Hide()
-assert(not voting.sltDialogBlocker:IsShown())
+assert(not voting.nrtDialogBlocker:IsShown())
 assert(timer:IsShown() and response:IsShown())
 -- Repeated focus must use bounded bands instead of accumulating frame levels.
 for i=1,300 do A:FocusWindow(i%2==0 and settings or response) end
@@ -179,29 +179,29 @@ A:BuildConfirmationUI(A.ui, function()
 end, function(parent) return CreateFrame('FontString',nil,parent) end,
     function(parent) return CreateFrame('Button',nil,parent) end)
 local dialog=A.ui.confirmation
-local kind='SANGUINELOOTCOUNCIL_AWARD'
+local kind='NAUSERAIDTOOLS_AWARD'
 local confirmed=0
 A.state={id='award-session'}
 function A:ConfirmAward(data)
     assert(data.item==1)
     assert(not dialog:IsShown())
-    assert(not voting.sltDialogBlocker:IsShown(), 'Voting is still dimmed when the award advances')
+    assert(not voting.nrtDialogBlocker:IsShown(), 'Voting is still dimmed when the award advances')
     confirmed=confirmed+1
 end
 local function openConfirmation()
-    dialog.sltDialogOwner=voting
+    dialog.nrtDialogOwner=voting
     A.confirmationContext={kind=kind,sid=A.state.id,rounds={},data={item=1}}
     dialog:Show()
-    assert(voting.sltDialogBlocker:IsShown())
+    assert(voting.nrtDialogBlocker:IsShown())
 end
 openConfirmation()
 assert(A:AcceptConfirmation() and confirmed==1)
 openConfirmation()
 A:CloseConfirmation()
-assert(not voting.sltDialogBlocker:IsShown() and confirmed==1)
+assert(not voting.nrtDialogBlocker:IsShown() and confirmed==1)
 openConfirmation()
 dialog:Hide() -- Escape closes the frame directly
-assert(not voting.sltDialogBlocker:IsShown() and not A.confirmationContext)
+assert(not voting.nrtDialogBlocker:IsShown() and not A.confirmationContext)
 ''')
 print('Award confirmation clears the Voting shade before accepting and also on cancel or direct dismissal.')
 for file in SRC.glob('*.lua'):

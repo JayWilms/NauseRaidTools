@@ -10,8 +10,8 @@ function A.Client:ServerTime() return 100 end
 function A.Client:InRaid() return true end
 function A.Client:Combat() return false end
 ''')
-lua.execute((root/'SanguineLootTools/LootConfiguration.lua').read_text(encoding='utf-8'),
-            'SanguineLootTools',lua.globals().A)
+lua.execute((root/'NauseRaidTools/LootConfiguration.lua').read_text(encoding='utf-8'),
+            'NauseRaidTools',lua.globals().A)
 lua.execute('''
 function A:EquipmentLink(link) return type(link)=='string' and link:match('item:%d+') and link end
 function A:IsMaster() return true end
@@ -123,8 +123,8 @@ assert(not blocked.failed)
 print('Multiple boss drops: stable/retained/compacted slots, distinct copies, receipt gate and failed assignments passed.')
 
 for name in ['Equipment','Loot']:
-    lua.execute((root/'SanguineLootTools'/f'{name}.lua').read_text(encoding='utf-8'),
-                'SanguineLootTools',lua.globals().A)
+    lua.execute((root/'NauseRaidTools'/f'{name}.lua').read_text(encoding='utf-8'),
+                'NauseRaidTools',lua.globals().A)
 lua.execute('''
 -- Real hyperlinks differ across characters. Existing copies must be in the
 -- baseline and the newly received GUID must remain reserved from normal scans.
@@ -197,8 +197,8 @@ now=25;A:SendCorpseAction('corpseStarted',{token='other'})
 assert(count==8,'bounded retry did not recover')
 function CreateFrame() return {RegisterEvent=function() end,SetScript=function() end} end
 ''')
-lua.execute((root/'SanguineLootTools/Network.lua').read_text(encoding='utf-8'),
-            'SanguineLootTools',lua.globals().A)
+lua.execute((root/'NauseRaidTools/Network.lua').read_text(encoding='utf-8'),
+            'NauseRaidTools',lua.globals().A)
 lua.execute('''
 function A:IsSoloTest() return false end
 function A:RosterKey() return 'raid' end

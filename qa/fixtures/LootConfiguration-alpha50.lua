@@ -31,7 +31,7 @@ function A:CleanLootConfiguration(c)
     return result
 end
 function A:LootConfiguration()
-    return self:CleanLootConfiguration(self.state and self.state.lootConfiguration or (SanguineLootCouncilDB and SanguineLootCouncilDB.lootConfiguration)) or self:DefaultLootConfiguration()
+    return self:CleanLootConfiguration(self.state and self.state.lootConfiguration or (NauseRaidToolsDB and NauseRaidToolsDB.lootConfiguration)) or self:DefaultLootConfiguration()
 end
 function A:SaveLootConfiguration(c)
     if not self:CanConfigureRaid() then self:Print("Only the Raid Leader changes Loot Configuration.");return false end
@@ -92,7 +92,7 @@ function A:ReduceLootConfiguration(sender,p)
         s.lootConfiguration=c;s.autoCollect=c.collection;s.lootConfigRevision=(s.lootConfigRevision or 0)+1
         -- Cancel prepared actions when rules change. Already awarded deliveries retain their recipient.
         self:CancelPreparedCorpseRoutes()
-        if not self.demo then SanguineLootCouncilDB.lootConfiguration=self.Copy(c) end
+        if not self.demo then NauseRaidToolsDB.lootConfiguration=self.Copy(c) end
         return true
     end
     if self.demo then return false,"Automatic distribution is disabled in test mode." end

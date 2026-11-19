@@ -4,7 +4,7 @@ import sys
 sys.path.insert(0,str(Path(__file__).parent/'test-deps'))
 from lupa.lua51 import LuaRuntime
 ROOT=Path(__file__).resolve().parent.parent
-SRC=ROOT/'SanguineLootTools'
+SRC=ROOT/'NauseRaidTools'
 tree=ast.parse((ROOT/'qa/check_pickups.py').read_text(encoding='utf-8'))
 constants={t.id:ast.literal_eval(n.value) for n in tree.body if isinstance(n,ast.Assign) and isinstance(n.value,ast.Constant) and isinstance(n.value.value,str) for t in n.targets if isinstance(t,ast.Name)}
 
@@ -12,7 +12,7 @@ def setup():
     lua=LuaRuntime(unpack_returned_tuples=True)
     lua.execute(constants['MOCK'])
     for name in ['Core','Features','Archive','Equipment','ResponseConfig','Voting','LootConfiguration','Loot','WireCodec','StateDelta','Network']:
-        lua.execute((SRC/f'{name}.lua').read_text(encoding='utf-8'),'SanguineLootTools',lua.globals().A)
+        lua.execute((SRC/f'{name}.lua').read_text(encoding='utf-8'),'NauseRaidTools',lua.globals().A)
     lua.execute(constants['SETUP'])
     lua.execute('''
 source='Holder-Realm';recipient='Recipient-Realm';winner='Winner-Realm'

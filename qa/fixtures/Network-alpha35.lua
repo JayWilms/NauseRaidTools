@@ -1,5 +1,5 @@
 local addonName, A = ...
-local PREFIX, PROTOCOL = "SanguineLC", A.protocol
+local PREFIX, PROTOCOL = "NauseRT", A.protocol
 local queue, incoming, completed, serial = {}, {}, {}, 0
 -- One pacing gate for this prefix, shared by every queued message/channel.
 local nextSendAt,sendInterval=0,0.10
@@ -166,7 +166,7 @@ function A:Send(packet,target,options)
     local bytes=0;for _,batch in ipairs(queue) do bytes=bytes+batch.bytes end
     if bytes-(previous and previous.bytes or 0)+size>2097152 then
         self.networkMetrics=self.networkMetrics or {};self.networkMetrics.overflows=(self.networkMetrics.overflows or 0)+1
-        self:Print("Network queue is full. This action was not queued; wait and use /slt sync.");return false
+        self:Print("Network queue is full. This action was not queued; wait and use /nrt sync.");return false
     end
     local batch=previous or {created=A.Client:Uptime()}
     -- Coalescing a later timer/background change must not demote live data.
@@ -276,7 +276,7 @@ function A:PumpSender()
         end
         nextSendAt=A.Client:Uptime()+sendInterval
         batch.retries=(batch.retries or 0)+1
-        if batch.retries>=20 then self:ClearPendingPersonalResponse(batch.responseRequest);table.remove(queue,selected);self:Print("A network message failed. Check the raid connection and use /slt sync.") end
+        if batch.retries>=20 then self:ClearPendingPersonalResponse(batch.responseRequest);table.remove(queue,selected);self:Print("A network message failed. Check the raid connection and use /nrt sync.") end
     end
 end
 
@@ -654,11 +654,11 @@ frame:SetScript("OnEvent", function(_, event, ...)
     if A.LootEvent then A:LootEvent(event, ...) end
     if event == "ADDON_LOADED" then
         if (...) ~= addonName then return end
-        SanguineLootCouncilDB = SanguineLootCouncilDB or {}
-        SanguineLootCouncilDB.history = SanguineLootCouncilDB.history or {}
+        NauseRaidToolsDB = NauseRaidToolsDB or {}
+        NauseRaidToolsDB.history = NauseRaidToolsDB.history or {}
         A:InitStorage()
         local ok,registered=A.Client:Call("C_ChatInfo.RegisterAddonMessagePrefix",PREFIX)
-        if not ok or registered==false then A:Print("Addon communication API unavailable. Use /slt diagnostics; live communication is unconfirmed.") end
+        if not ok or registered==false then A:Print("Addon communication API unavailable. Use /nrt diagnostics; live communication is unconfirmed.") end
         A:RefreshRoster()
     elseif event == "CHAT_MSG_ADDON" then A:Receive(...)
     elseif event == "PARTY_LOOT_METHOD_CHANGED" then A:SyncGameMaster()

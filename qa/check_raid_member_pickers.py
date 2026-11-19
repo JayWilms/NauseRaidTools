@@ -10,7 +10,7 @@ def setup():
     lua=LuaRuntime(unpack_returned_tuples=True)
     lua.execute(frames+'\nSlashCmdList={}\n')
     for name in ['Core','Features','Voting','ResponseConfig','Responses','LootConfiguration','Warnings','SettingsUI']:
-        lua.execute((root/'SanguineLootTools'/f'{name}.lua').read_text(encoding='utf-8'),'SanguineLootTools',lua.globals().A)
+        lua.execute((root/'NauseRaidTools'/f'{name}.lua').read_text(encoding='utf-8'),'NauseRaidTools',lua.globals().A)
     lua.execute('''
 function A:StylePanel() end
 function A:StyleRailArrow() end

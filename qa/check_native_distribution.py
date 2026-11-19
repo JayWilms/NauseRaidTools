@@ -35,7 +35,7 @@ print('Three green slots (including quantity 3) and two blues distribute without
 # Completed utility assignments leave the active Loot list, regardless of
 # quality. Their canonical history/queue protections remain intact, while a
 # pending trade or mismatched delivery must remain visible for action.
-lua.execute((source/'LootUI.lua').read_text(encoding='utf-8'),'SanguineLootTools',lua.globals().A)
+lua.execute((source/'LootUI.lua').read_text(encoding='utf-8'),'NauseRaidTools',lua.globals().A)
 lua.execute('''
 for _,entry in ipairs(A.state.trackedLoot) do
     local item=A:ItemByID(entry.item)
@@ -206,8 +206,8 @@ result.quantity=result.quantity+1
 assert(not A:ReduceNativeReceipt('Master-Realm',result),'conflicting receipt accepted')
 function A:Record(item) self:UpsertAward(item) end
 for _,item in ipairs(A.state.items) do A:Record(item) end
-assert(#SanguineLootCouncilDB.history==2) -- Three green materials do not consume History capacity.
-for _,record in ipairs(SanguineLootCouncilDB.history) do
+assert(#NauseRaidToolsDB.history==2) -- Three green materials do not consume History capacity.
+for _,record in ipairs(NauseRaidToolsDB.history) do
     assert(record.quantity and record.delivery.method=='masterloot_native')
 end
 assert(A:ReduceArchive('Master-Realm',{expectedRevision=A.rev}))
@@ -234,7 +234,7 @@ print('Pending native result persistence and native evidence separation passed.'
 # the final-assignment toggle. Actual bag GUIDs enter the ordinary council flow.
 for timed in [False, True]:
     lua=master()
-    lua.execute((source/'Loot.lua').read_text(encoding='utf-8'),'SanguineLootTools',lua.globals().A)
+    lua.execute((source/'Loot.lua').read_text(encoding='utf-8'),'NauseRaidTools',lua.globals().A)
     lua.globals().timed=timed
     lua.execute('''
 A.state.lootConfiguration.rules[4]={action='council',target='',reason='',note=''}

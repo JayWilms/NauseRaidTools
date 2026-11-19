@@ -8,7 +8,7 @@ A={};SlashCmdList={}
 function CreateFrame() return {RegisterEvent=function() end,SetScript=function() end} end
 ''')
 for name in ['Core','Features','Voting','ResponseConfig','Responses','LootConfiguration','Warnings','WindowLayouts','CouncilUI']:
-    lua.execute((root/'SanguineLootTools'/f'{name}.lua').read_text(),'SanguineLootTools',lua.globals().A)
+    lua.execute((root/'NauseRaidTools'/f'{name}.lua').read_text(),'NauseRaidTools',lua.globals().A)
 lua.execute('''
 A.me='Leader-Realm';A.roster={};A.leader=nil
 A.Client={ClockReady=function() return false end}
@@ -17,16 +17,16 @@ function A:Changed() end
 function A:RenderSettings() end
 function A:Render() end
 A:InitStorage()
-SanguineLootCouncilDB.lootConfiguration.openWindow=true
+NauseRaidToolsDB.lootConfiguration.openWindow=true
 assert(A:LootWindowAutoOpen(),'the existing opening preference was not migrated')
 A:SetLootWindowAutoOpen(false)
 assert(not A:LootWindowAutoOpen())
-assert(SanguineLootCouncilDB.lootConfiguration.openWindow,'personal toggle changed shared raid settings')
+assert(NauseRaidToolsDB.lootConfiguration.openWindow,'personal toggle changed shared raid settings')
 assert(A:SaveProfile('Display independent'))
-assert(SanguineLootCouncilDB.profiles['Display independent'].displayPreferences==nil)
-SanguineLootCouncilDB.lootConfiguration.openWindow=false
+assert(NauseRaidToolsDB.profiles['Display independent'].displayPreferences==nil)
+NauseRaidToolsDB.lootConfiguration.openWindow=false
 assert(A:LoadProfile('Display independent'))
-assert(SanguineLootCouncilDB.lootConfiguration.openWindow)
+assert(NauseRaidToolsDB.lootConfiguration.openWindow)
 assert(not A:LootWindowAutoOpen(),'loading a raid profile overwrote personal display preferences')
 A:SetLootWindowAutoOpen(true)
 A.me='Alt-Realm';A:SetLootWindowAutoOpen(false)
@@ -55,7 +55,7 @@ assert(A:LoadProfile('Display independent'))
 assert(A:LootWindowLayout('response')=='Compact' and A:LootWindowLayout('voting')=='Full')
 
 local response, voting={},{}
-A.windowFrames={{name='SanguineLootCouncilResponses',frame=response},{name='SanguineLootCouncilMain',frame=voting}}
+A.windowFrames={{name='NauseRaidToolsResponses',frame=response},{name='NauseRaidToolsMain',frame=voting}}
 assert(A:WindowPolicy(response)[1]==620 and A:WindowPolicy(voting)[1]==1100)
 A.me='Leader-Realm'
 assert(A:WindowPolicy(response)[1]==760 and A:WindowPolicy(voting)[1]==740)
@@ -75,7 +75,7 @@ A.ResponseOptions=oldOptions
 
 -- Timer mode has independent sizing and keeps existing Full dimensions.
 local timer={}
-A.windowFrames[#A.windowFrames+1]={name='SanguineLootCouncilTimer',frame=timer}
+A.windowFrames[#A.windowFrames+1]={name='NauseRaidToolsTimer',frame=timer}
 local timerSaved={width=672,height=350,compactWidth=400,compactHeight=260,geometryVersion=3}
 local w,h=A:PreferredWindowSize(timer,timerSaved)
 assert(w==672 and h==350)
@@ -136,12 +136,12 @@ A.ui=nil;A.noteDraftKey=nil
 
 local first={width=900,height=600,x=11,y=22}
 local second={width=720,height=400,x=33,y=44}
-A.windowFrames={{name='SanguineLootCouncilTrade',frame=first},{name='SanguineLootCouncilTimer',frame=second}}
+A.windowFrames={{name='NauseRaidToolsTrade',frame=first},{name='NauseRaidToolsTimer',frame=second}}
 local store=A:WindowLayoutStore()
-store.SanguineLootCouncilTrade={x=11,y=22}
-store.SanguineLootCouncilTimer={x=33,y=44}
-store.positionsLocked=true;store.windowLocks={SanguineLootCouncilTrade=true}
-local untouched=store.SanguineLootCouncilTimer
+store.NauseRaidToolsTrade={x=11,y=22}
+store.NauseRaidToolsTimer={x=33,y=44}
+store.positionsLocked=true;store.windowLocks={NauseRaidToolsTrade=true}
+local untouched=store.NauseRaidToolsTimer
 function A:FinishWindowMove(frame,name) frame.stopped=true end
 function A:ResizeReadableWindow(frame,w,h) frame.width=w;frame.height=h end
 function A:DefaultWindowPosition(frame) frame.x=100;frame.y=200 end
@@ -150,13 +150,13 @@ function A:RefreshWindowChrome() end
 local choices=A:WindowResetChoices()
 assert(#choices==2 and choices[1][1]=='Loot Window' and choices[2][1]=='Timer Window')
 assert(not A:ResetOneWindowLayout('UnknownWindow'))
-assert(A:ResetOneWindowLayout('SanguineLootCouncilTrade'))
+assert(A:ResetOneWindowLayout('NauseRaidToolsTrade'))
 assert(first.width==820 and first.height==440 and first.x==100 and first.y==200)
 assert(second.width==720 and second.height==400 and second.x==33 and second.y==44)
-assert(store.SanguineLootCouncilTimer==untouched,'single reset touched another window store')
-assert(store.positionsLocked and store.windowLocks.SanguineLootCouncilTrade,'reset changed lock preferences')
+assert(store.NauseRaidToolsTimer==untouched,'single reset touched another window store')
+assert(store.positionsLocked and store.windowLocks.NauseRaidToolsTrade,'reset changed lock preferences')
 function A:RestoreWindowLayouts()
- assert(store.SanguineLootCouncilTrade==nil and store.SanguineLootCouncilTimer==nil)
+ assert(store.NauseRaidToolsTrade==nil and store.NauseRaidToolsTimer==nil)
  self.restoredAll=true
 end
 A:ResetWindowLayout();assert(A.restoredAll and store.positionsLocked)
@@ -168,7 +168,7 @@ print('Auto-open is per-character and independent of raid profiles/state; single
 # Settings context distinguishes saved/live/personal work and keeps notices
 # scoped to controls the viewer cannot change. Switching tabs updates it now,
 # without waiting for another raid event.
-lua.execute((root/'SanguineLootTools/SettingsUI.lua').read_text(),'SanguineLootTools',lua.globals().A)
+lua.execute((root/'NauseRaidTools/SettingsUI.lua').read_text(),'NauseRaidTools',lua.globals().A)
 lua.execute('''
 local function widget()
  return {SetText=function(s,v) s.text=v end,SetShown=function(s,v) s.shown=v end,SetBackdropColor=function() end}

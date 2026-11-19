@@ -4,7 +4,7 @@ import sys
 sys.path.insert(0,str(Path(__file__).parent/'test-deps'))
 from lupa.lua51 import LuaRuntime
 ROOT=Path(__file__).resolve().parent.parent
-SRC=ROOT/'SanguineLootTools'
+SRC=ROOT/'NauseRaidTools'
 
 MOCK=r'''
 now,wall,bags,received,reports=100,100000,{}, {},0
@@ -54,7 +54,7 @@ def setup(old=False):
     g=lua.globals()
     for name in ['Core','Features','Archive','Equipment','ResponseConfig','Voting','LootConfiguration','Loot','WireCodec','StateDelta','Network']:
         path=ROOT/f'qa/fixtures/{name}-alpha36.lua' if old and name in ('Core','Loot') else SRC/f'{name}.lua'
-        lua.execute(path.read_text(encoding='utf-8'),'SanguineLootTools',g.A)
+        lua.execute(path.read_text(encoding='utf-8'),'NauseRaidTools',g.A)
     lua.execute(SETUP)
     return lua
 

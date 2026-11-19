@@ -9,7 +9,7 @@ function CreateFrame() return {RegisterEvent=function() end,SetScript=function()
 ''')
 for name in ('Core','Client','Features','Archive','Awards','Voting','ResponseConfig','Responses',
              'LootConfiguration','Equipment','Loot','Warnings','MasterLooter','Recovery','StateDelta','WireCodec','Network'):
-    LUA.execute((ROOT/'SanguineLootTools'/f'{name}.lua').read_text(), 'SanguineLootTools', LUA.globals().A)
+    LUA.execute((ROOT/'NauseRaidTools'/f'{name}.lua').read_text(), 'NauseRaidTools', LUA.globals().A)
 
 LUA.execute('''
 local leader,backup,peer='Leader-Forever','Backup-Forever','Peer-Forever'
@@ -40,7 +40,7 @@ local function inbound(from,packet,channel)
 end
 A.me,A.leader=leader,leader
 A.roster={[leader]='raid1',[backup]='raid2',[peer]='raid3'}
-SanguineLootCouncilDB={}
+NauseRaidToolsDB={}
 A:InitStorage()
 local config=A:DefaultLootConfiguration()
 config.collection,config.automatic=true,true
@@ -83,13 +83,14 @@ local token=last('recoveryProbe').packet.token
 inbound(backup,{kind='recoveryOffer',sid='original',token=token,rev=12,complete=true})
 now=now+6;A:TickRecovery()
 assert(last('recoveryFetch').target==backup and A:RecoveryTransportPeer(backup))
+assert(A:RecoveryPreview():find('Fetching the latest known copy',1,true))
 inbound(leader,{kind='recoveryState',sid='original',token=token,rev=12,state=live})
 assert(A.recoveryPending and A.state.id=='original')
 local payload=A.Encode({kind='recoveryState',sid='original',token=token,rev=12,state=live,protocol=A.protocol})
 local fragments=math.ceil(#payload/180)
 assert(fragments>8)
 for i=1,fragments do
-    A:Receive('SanguineLC','9988:'..i..':'..fragments..':'..payload:sub((i-1)*180+1,i*180),'WHISPER',backup)
+    A:Receive('NauseRT','9988:'..i..':'..fragments..':'..payload:sub((i-1)*180+1,i*180),'WHISPER',backup)
 end
 local recovered=A.state
 assert(not A.recoveryPending and recovered.id~='original' and recovered.historyID=='original')
@@ -117,6 +118,7 @@ token=last('recoveryProbe').packet.token
 inbound(backup,{kind='recoveryOffer',sid='original',token=token,rev=12,complete=true})
 now=now+6;A:TickRecovery()
 assert(A.recoveryFailed=='original' and A.recoveryPending and A.rev==13)
+assert(A:RecoveryPreview():find('Loot actions remain paused',1,true))
 
 -- Same leader reload can use an older checkpoint to locate a newer live copy.
 A:EndRecovery()
@@ -166,6 +168,9 @@ A:RefreshRecoveryAuthority();A:CheckRecoveryRoster()
 assert(A.leader==backup and A.recoveryPending and not A:CanTakeOverSession())
 A.me=backup
 assert(A:CanTakeOverSession())
+local preview=A:RecoveryPreview()
+assert(preview:find('is offline',1,true) and preview:find('(Master Looter)',1,true))
+assert(preview:find('Last seen: 1 open response rounds | 1 items in voting | 1 awards awaiting delivery',1,true))
 A.me=assistant
 online.raid2=nil
 A:RefreshRecoveryAuthority();A:CheckRecoveryRoster()
@@ -186,7 +191,10 @@ inbound(leader,ballotPacket.packet,'WHISPER')
 assert(A:RecoveryCopy().items[1].ballots[backup].choices[peer])
 A:RefreshRecoveryAuthority();A:CheckRecoveryRoster()
 function A:ReadGameMaster() return backup,'game' end
+local preview=A:RecoveryPreview()
+assert(preview:find('(Raid Assistant)',1,true) and preview:find("Your copy matches this client's latest known revision",1,true))
 assert(A:TakeOverSession())
+assert(A:RecoveryPreview():find('Checking raid copies',1,true))
 A:TickRecovery()
 local assistantProbe=last('recoveryProbe').packet
 now=now+6;A:TickRecovery()
@@ -196,6 +204,9 @@ assert(delegated.master==assistant and delegated.masterSource=='recovery')
 assert(A:ReadGameMaster()==backup and not A:IsGameLeader())
 assert(A.rev==13 and delegated.trackedLoot[1].holder==backup)
 assert(delegated.items[1].responseDeadline==1160 and not delegated.lootConfiguration.automatic)
+local preview, deliveries=A:RecoveryPreview()
+assert(deliveries==1 and preview:find('Restored session host:',1,true))
+assert(preview:find('Automatic collection and awards are paused',1,true) and not preview:find('Last seen',1,true))
 
 -- A participant accepts the linked recovery snapshot and keeps the host
 -- when the crown reconnects. A delayed view from the former host is ignored.
@@ -229,7 +240,7 @@ assert(A.state.id==delegated.id and A.leader==assistant and not A.recoveryPendin
 -- council members and whether a private backup matches the active revision.
 A:EndRecovery()
 A.me,A.leader,A.state,A.rev=leader,leader,nil,0
-SanguineLootCouncilDB.raidSetup={council={[peer]=true,['Absent-Forever']=true},recoveryAssistant=assistant}
+NauseRaidToolsDB.raidSetup={council={[peer]=true,['Absent-Forever']=true},recoveryAssistant=assistant}
 local master,council,present,total,selected,assistantText=A:LootCheckRoles()
 assert(master==backup..' (offline)' and council[backup] and present==1 and total==3)
 assert(selected==assistant and assistantText:find('online, promoted',1,true))

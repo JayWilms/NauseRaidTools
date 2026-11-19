@@ -11,8 +11,8 @@ lua = LuaRuntime(unpack_returned_tuples=True)
 lua.execute(fixtures['MOCK'])
 for name in ['Core', 'Features', 'Archive', 'Equipment', 'ResponseConfig', 'Voting',
              'LootConfiguration', 'Loot', 'WireCodec', 'StateDelta', 'Network']:
-    lua.execute((root / 'SanguineLootTools' / (name + '.lua')).read_text(encoding='utf-8'),
-                'SanguineLootTools', lua.globals().A)
+    lua.execute((root / 'NauseRaidTools' / (name + '.lua')).read_text(encoding='utf-8'),
+                'NauseRaidTools', lua.globals().A)
 lua.execute(fixtures['SETUP'])
 lua.execute(r'''
 UIParent={}

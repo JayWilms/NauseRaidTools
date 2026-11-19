@@ -42,3 +42,5 @@ __pycache__/
 .DS_Store
 Thumbs.db
 work/
+
+!dist/NauseRaidTools-0.12.0-alpha.78-install.zip

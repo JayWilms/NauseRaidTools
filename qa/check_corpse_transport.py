@@ -2,7 +2,7 @@ from pathlib import Path
 from lupa.lua51 import LuaRuntime
 
 root=Path(__file__).resolve().parent.parent
-source=root/'SanguineLootTools'
+source=root/'NauseRaidTools'
 
 def peer(name, before=False, identical=False, salvage=False, native=False):
     lua=LuaRuntime(unpack_returned_tuples=True)
@@ -13,9 +13,9 @@ function CreateFrame() return {RegisterEvent=function() end,SetScript=function()
     for module in ['Core','Features','Archive','Awards','Equipment','Voting','ResponseConfig',
                    'Responses','Warnings','Loot','LootConfiguration','WireCodec','StateDelta','Network']:
         path=root/'qa/fixtures/LootConfiguration-alpha50.lua' if before and module=='LootConfiguration' else source/(module+'.lua')
-        lua.execute(path.read_text(encoding='utf-8'),'SanguineLootTools',lua.globals().A)
+        lua.execute(path.read_text(encoding='utf-8'),'NauseRaidTools',lua.globals().A)
     if native:
-        lua.execute((source/'NativeLoot.lua').read_text(encoding='utf-8'),'SanguineLootTools',lua.globals().A)
+        lua.execute((source/'NativeLoot.lua').read_text(encoding='utf-8'),'NauseRaidTools',lua.globals().A)
     lua.globals().peerName=name
     lua.execute('''
 A.me=peerName;A.leader='Master-Realm'
@@ -80,7 +80,7 @@ C_Item={GetItemGUID=function(loc) return bags[loc.slot].guid end,IsBound=functio
     GetItemInfo=function(link)
         return 'Item',link,3,30,25,'Item','Item',link:match('item:900001:') and 20 or 1
     end}
-SanguineLootCouncilDB={}
+NauseRaidToolsDB={}
 A:InitStorage()
 A.state={id='transport-test',leader='Master-Realm',master='Master-Realm',council={},items={},trackedLoot={},
     responseOptions=A:DefaultResponses(),rules=A:DefaultVoting(),responseDuration=60,lootConfigRevision=0,
