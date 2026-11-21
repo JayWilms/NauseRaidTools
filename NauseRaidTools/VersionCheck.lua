@@ -7,6 +7,7 @@ local function normalize(name)
     return name
 end
 function A:InstalledSoftResVersion()
+    if self.SoftRes and self.SoftRes.bundled then return self.version end
     local sr=NauseSoftReserve
     return type(sr)=="table" and version(sr.version) and sr.version or "-"
 end
@@ -94,6 +95,7 @@ function A:VersionMemberStatus(name)
     if row.wire~=self.protocol then return "Incompatible",false end
     if row.nrt~=self.version then return "Version mismatch",false end
     local sr=self:InstalledSoftResVersion()
+    if self.SoftRes and self.SoftRes.bundled then return "Matched",true end
     if sr~="-" and row.sr=="-" then return "SoftRes not enabled",false end
     if sr~="-" and row.sr~=sr then return "SoftRes mismatch",false end
     return "Matched",true
@@ -103,7 +105,7 @@ function A:BuildVersionCheckUI(u,window,text,button)
     u.versionScope=text(f,"",12,20,-50,740)
     u.versionNote=text(f,"Anyone can check. No reply does not prove the addon is missing.",11,20,-79,740)
     button(f,"Refresh",640,-108,120,function() A:StartVersionCheck(false) end)
-    for i,row in ipairs({{"PLAYER",20,230},{"NRT",260,145},{"SOFTRES",415,145},{"STATUS",570,190}}) do text(f,row[1],11,row[2],-151,row[3]) end
+    for i,row in ipairs({{"PLAYER",20,290},{"NRT",320,180},{"STATUS",520,240}}) do text(f,row[1],11,row[2],-151,row[3]) end
     local scroll=self:CreateScrollFrame(f);scroll:SetPoint("TOPLEFT",20,-178);scroll:SetSize(720,285);u.versionScroll=scroll
     local child=CreateFrame("Frame",nil,scroll);child:SetSize(720,1);scroll:SetScrollChild(child);u.versionChild=child;u.versionRows={}
     u.versionSummary=text(f,"",11,20,-485,740)
@@ -125,7 +127,7 @@ function A:RenderVersionCheck()
         if not row then
             row=CreateFrame("Frame",nil,u.versionChild);row:SetPoint("TOPLEFT",0,-(i-1)*26);row:SetSize(720,26);self:StyleDataRow(row,i)
             row.cells={}
-            for n,cell in ipairs({{0,230},{240,145},{395,145},{550,170}}) do
+            for n,cell in ipairs({{0,290},{300,180},{500,220}}) do
                 local label=row:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall");label:SetPoint("TOPLEFT",cell[1],-5);label:SetSize(cell[2],18);label:SetMaxLines(1);label:SetWordWrap(false);label:SetJustifyH("LEFT");row.cells[n]=label
             end
             u.versionRows[i]=row
@@ -134,13 +136,13 @@ function A:RenderVersionCheck()
         if name then
             local entry=r.members[name];local status,correct=self:VersionMemberStatus(name)
             if entry then detected=detected+1 end;if correct then matched=matched+1 end
-            local values={name..(name==r.me and " (you)" or ""),entry and entry.nrt or "—",entry and (entry.sr=="-" and "Not enabled" or entry.sr) or "—",status}
+            local values={name..(name==r.me and " (you)" or ""),entry and entry.nrt or "—",status}
             for n,cell in ipairs(row.cells) do cell:SetText(values[n]) end
-            row.cells[4]:SetTextColor(correct and .35 or 1,correct and .85 or .70,correct and .50 or .35)
+            row.cells[3]:SetTextColor(correct and .35 or 1,correct and .85 or .70,correct and .50 or .35)
         end
     end
     u.versionChild:SetHeight(math.max(1,#names*26))
-    u.versionScope:SetText("Checking: "..(r.scope=="SOLO" and "Your installed addons" or r.scope).." · Your NRT: "..self.version.." · SoftRes: "..(self:InstalledSoftResVersion()=="-" and "Not enabled" or self:InstalledSoftResVersion()))
+    u.versionScope:SetText("Checking: "..(r.scope=="SOLO" and "Your installed addon" or r.scope).." · Your NRT: "..self.version)
     local stale=r.scope~="SOLO" and self.Client:Uptime()-r.started>60
     u.versionSummary:SetText((r.scope=="SOLO" and "Installed versions on this character" or (detected.."/"..#names.." replied · "..matched.." matched"))..(stale and " · Refresh needed" or "")..(r.sent==false and " · Request could not be sent" or ""))
     self:RefreshScrollChrome(u.versionScroll)

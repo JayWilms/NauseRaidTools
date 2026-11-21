@@ -106,7 +106,7 @@ function A:AnnounceLootAction(p,settings,trackedBefore)
     elseif settings.awards and (op=="award" or op=="correctAward") then
         local item=self:ItemByID(p.item)
         if not item or item.automaticAssignment then return end
-        local winner=item.winner:gsub("[%c|]","")
+        local winner=self:FullDisplayName(item.winner):gsub("[%c|]","")
         local prefix=op=="correctAward" and "[Nause] Award corrected: " or "[Nause] "
         local suffix=(op=="correctAward" and " now awarded to " or " awarded to ")..winner.."."
         announceItems(self,prefix,{item.link},suffix)
@@ -154,10 +154,10 @@ function A:LootCheckRoles()
     local gameMaster, gameStatus = self:ReadGameMaster()
     local addonMaster = s and s.master or gameMaster or (self.roster[settings.master] and settings.master) or self.gameLeader
     if (s and s.masterBlocked) or (not s and (gameStatus=="pending" or gameStatus=="restricted")) then addonMaster=nil end
-    local masterText = gameMaster or (gameStatus=="none" and "None" or "Unconfirmed")
+    local masterText = gameMaster and self:FullDisplayName(gameMaster) or (gameStatus=="none" and "None" or "Unconfirmed")
     if gameMaster and self:MemberOffline(gameMaster) then masterText=masterText.." (offline)" end
     if addonMaster and addonMaster~=gameMaster then
-        masterText=masterText.."  |  Addon Master Looter: "..addonMaster..(self:MemberOffline(addonMaster) and " (offline)" or "")
+        masterText=masterText.."  |  Addon Master Looter: "..self:FullDisplayName(addonMaster)..(self:MemberOffline(addonMaster) and " (offline)" or "")
     end
     local council, present, total = self.Copy(settings.council), 0, 0
     if addonMaster then council[addonMaster]=true end
@@ -166,7 +166,7 @@ function A:LootCheckRoles()
         if self:RecoveryOnline(name)==true then present=present+1 end
     end
     local assistant=settings.recoveryAssistant
-    local assistantText=assistant or "None selected"
+    local assistantText=assistant and self:FullDisplayName(assistant) or "None selected"
     if assistant then
         local online=self:RecoveryOnline(assistant)
         local status=not self.roster[assistant] and "absent" or not self:IsRaidAssistant(assistant) and "rank unconfirmed"
@@ -185,7 +185,7 @@ function A:LootCheckRecoveryStatus()
         if self:CheckedRecoveryBackup(name) and names[1]~=name then names[#names+1]=name end
     end
     table.sort(names)
-    if #names>0 then return "Verified on "..table.concat(names,", ") end
+    if #names>0 then return "Verified on "..table.concat(self:DisplayNames(names),", ") end
     if not s.recoveryBackup and not s.recoveryAssistant then return "No backup assigned" end
     return "Unconfirmed for the current session revision"
 end

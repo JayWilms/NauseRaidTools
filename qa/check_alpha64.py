@@ -80,7 +80,9 @@ assert(A.roster['Alex-Stone'] == 'player' and A.roster['Alex-River'] == 'party1'
 assert(A:Name('NPC') == 'Alex-River' and not A:Name('party2'))
 assert(A:Resolve('Alex') == nil and A:Resolve('Alex-LegacyRealm') == nil)
 assert(A:Resolve('alex river') == 'Alex-River' and A:Resolve('Alex-Stone') == 'Alex-Stone')
-assert(A:DisplayName('Alex-Stone') == 'Alex-Stone')
+assert(A:DisplayName('Alex-Stone') == 'Alex Stone')
+assert(A:FullDisplayName('Zergul-Exe') == 'Zergul Exe')
+assert(A:FullDisplayName('Alex-River') == 'Alex River' and A:DisplayNames({'Alex-Stone','Alex-River'})[2] == 'Alex River')
 NauseRaidToolsDB = {history={
     {key='legacy', winner='Alex-LegacyRealm'},
     {key='stone', winner='Alex-Stone'},

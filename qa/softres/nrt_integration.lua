@@ -116,10 +116,20 @@ assert(s:AcceptRoll(s.session,a.me,12,1,100,a.roster))
 assert(s:AcceptRoll(s.session,"Raider-Realm",99,1,100,a.roster))
 assert(s:Command("close"))
 check(s.leaderRollUI.primary:GetText()=="Award winner","closed roll lacked award action")
+local raidAnnouncements={}
+e.SendChatMessage=function(message,channel) raidAnnouncements[#raidAnnouncements+1]={message=message,channel=channel} end
 assert(s:Command("record"))
+check(#raidAnnouncements==0,"award announced before confirmation")
 check(#s.session.history==0 and a.confirmationContext,"award skipped confirmation")
 check(a.ui.confirmationBody:GetText():find(link,1,true),"award confirmation did not show the tracked item name and quality colour")
+local awardDialog=e.StaticPopupDialogs.NAUSE_SR_CONFIRM_AWARD
+local awardContext={data=a.confirmationContext.data}
 assert(a:AcceptConfirmation())
+check(#raidAnnouncements==1 and raidAnnouncements[1].channel=="RAID"
+    and raidAnnouncements[1].message=="[Nause SR] "..link.." awarded to Leader-Realm (SR, 12). Delivery pending.",
+    "confirmed award did not announce its item, winner, tier and roll in raid")
+awardDialog.OnAccept(awardContext)
+check(#raidAnnouncements==1,"stale confirmation repeated an award announcement")
 check(s.session.history[1].winner==a.me and s.session.history[1].guid=="Item-nrt-first","SR priority or GUID lost")
 check(#s.session.reserves[a.me]==1,"SR award did not consume exactly one reservation")
 check(s.leaderRollUI.primary:GetText()=="View delivery","award did not lead to delivery action")
@@ -172,3 +182,4 @@ check(a.state and not s.session and not s.runChooser,"guided guild start opened 
 check(a.guidedGuildStart==nil,"temporary guild-start marker leaked")
 check(not s:Begin(1),"SR began during a guild session")
 print("NRT SR INTEGRATION PASS: "..count.." checks; AtlasLoot, native data, session exclusion, exact duplicate copies, draft start and SR priority")
+

@@ -1,7 +1,7 @@
 local _, A = ...
 NauseRaidTools = A
 A.displayName = "Nause Raid Tools"
-A.version = "0.12.0-alpha.84"
+A.version = "0.12.0-alpha.108"
 A.protocol = 19
 A.confirmationDialogs = {}
 A.responses = {"BIS", "Upgrade", "Minor Upgrade", "Off-Spec", "PvP", "Pass"}
@@ -106,8 +106,17 @@ function A:IsCouncilMember(name)
 end
 function A:IsCouncil() return self:IsCouncilMember(self.me) end
 function A:CanViewCouncil() return (self:IsMaster() or self:IsCouncil()) == true end
+function A:FullDisplayName(name)
+    if type(name)~="string" then return "" end
+    if self:IsForever() then return (name:gsub("^([^%-]+)%-(.+)$","%1 %2")) end
+    return name
+end
+function A:DisplayNames(names)
+    local labels={};for _,name in ipairs(names or {}) do labels[#labels+1]=self:FullDisplayName(name) end
+    return labels
+end
 function A:DisplayName(name)
-    if self:IsForever() then return name end
+    if self:IsForever() then return self:FullDisplayName(name) end
     local short=name:match("^[^-]+") or name
     for other in pairs(self.roster or {}) do
         if other~=name and (other:match("^[^-]+") or other)==short then return name end
@@ -132,17 +141,19 @@ end
 -- All requests are reduced here on the current raid leader's client.
 -- The transport supplies sender; never trust an identity in the payload.
 function A:Reduce(sender, p)
-    if not self.Client:ClockReady() then return false,"Client clocks unavailable. Session changes are disabled; use /nrt diagnostics." end
+    if not self.Client:ClockReady() then return false,"Client clocks unavailable. Session changes are disabled; use Settings > Advanced > Diagnostics." end
     if not self.roster[sender] or type(p) ~= "table" then return false, "Not a raid member." end
     if p.op == "start" then
         if sender ~= self.leader or (not self:IsSoloTest() and not self:IsGameLeader()) or self.state then return false, "Only the raid leader can start an idle session." end
         if p.groupTest~=nil and p.groupTest~=true then return false,"Invalid test mode." end
-        if self.Client:InGroup() and not self.Client:InRaid() and p.groupTest~=true then return false,"Party sessions are available through /nrt test only." end
+        if self.Client:InGroup() and not self.Client:InRaid() and p.groupTest~=true then return false,"Party sessions are available through Settings > Advanced > Loot Council Test only." end
         if p.groupTest and not self.Client:InGroup() then return false,"Shared tests require a party or raid." end
         self:InitStorage()
+        local profileName,profileModified=self:RaidProfileInfo()
         local setup=self:SessionRaidSettings()
         self.rev = 0
         self.state = {id = tostring(A.Client:ServerTime()) .. ":" .. tostring(math.random(100000, 999999)),
+            raidProfileName=profileName,raidProfileModified=profileModified,
             leader = sender, recoveryAssistant = setup.recoveryAssistant, master = setup.master, masterFallback = setup.masterFallback, council = self.Copy(setup.council), responseOptions=self.Copy(setup.responseOptions),responseNextID=6,responseConfigRevision=0, items = {}, selfVotes = setup.selfVotes, rules = self.Copy(setup.rules), responseDuration = setup.responseDuration,
             trackedLoot = {}, lootSequences = {}, autoCollect = setup.lootConfiguration.collection, lootConfiguration=self.Copy(setup.lootConfiguration),lootConfigRevision=0, warningSettings=self.Copy(setup.warningSettings),announcementSettings=self.Copy(setup.announcementSettings)}
         for _,option in ipairs(self.state.responseOptions) do self.state.responseNextID=math.max(self.state.responseNextID,option.id) end
@@ -153,6 +164,7 @@ function A:Reduce(sender, p)
             self.state.responseDuration=60;self.demo,self.groupTest=true,true
         end
         self:ApplyGameMaster()
+        self.state.raidProfileBaseline=self:ProfileConfiguration(self.state)
         return true
     end
     local s = self.state
@@ -365,7 +377,7 @@ function A:Act(op, data)
         self:Print("Loot actions are paused during session recovery.");return false
     end
     if not self.state and self.raidSetupOperations[op] then return self:ApplyIdleRaidSetting(op,data or {}) end
-    if not self.Client:ClockReady() then self:Print("Client clocks unavailable. Session actions are disabled; use /nrt diagnostics.");return false end
+    if not self.Client:ClockReady() then self:Print("Client clocks unavailable. Session actions are disabled; use Settings > Advanced > Diagnostics.");return false end
     data = data or {}
     if (op=="respond" or op=="open" or op=="queueLoot") and A.Client:Combat() then
         self:Print("Loot responses and releases are unavailable in combat. Reopen responses after combat if needed.");return false
@@ -397,7 +409,7 @@ function A:Act(op, data)
             self:Render()
         end
         return queued
-    else self:Print("Join a raid. Its leader controls the session. Use /nrt test to try it solo.");return false end
+    else self:Print("Join a raid. Its leader controls the session. Start a Loot Council Test in Settings > Advanced to try it solo.");return false end
 end
 
 function A:StartDemo()
@@ -405,17 +417,17 @@ function A:StartDemo()
     if self.Client:InGroup() then return self:StartGroupTest() end
     if self.state and not self.demo then self:Print("End the current session before using test mode."); return end
     local player=self:Name("player")
-    if not player then self:Print("Player identity unavailable; test mode cannot start. Use /nrt diagnostics.");return end
+    if not player then self:Print("Player identity unavailable; test mode cannot start. Use Settings > Advanced > Diagnostics.");return end
     self.state,self.rev,self.renderSession,self.selectedLootKey,self.selectedTracked=nil,0,nil,nil,nil
     self.demo, self.me = true, player
     self.leader = self.me
     self.roster = {[self.me] = "player", ["Warrior-Test"] = true, ["Priest-Test"] = true}
     self:Act("start")
-    if not self.state then self.demo=nil;self:Print("Test session could not start. Use /nrt diagnostics for details.");return end
+    if not self.state then self.demo=nil;self:Print("Test session could not start. Use Settings > Advanced > Diagnostics for details.");return end
     self.state.responseDuration=60
     self:SeedTestLoot()
     self:Render()
-    self:Print("Solo test: "..#self.state.trackedLoot.." Forever items await release in Loot. Use Queue on a row, Manage > Queue item, or Queue all to start 60-second responses. Real trading and history saving are disabled. /nrt test refreshes; /nrt leave-test exits.")
+    self:Print("Solo test: "..#self.state.trackedLoot.." Forever items await release in Loot. Use Queue on a row, Manage > Queue item, or Queue all to start 60-second responses. Real trading and history saving are disabled. Settings > Advanced > Loot Council Test refreshes; Stop Test in Settings > Advanced exits.")
 end
 
 
@@ -426,7 +438,7 @@ function A:StartGroupTest()
     if self.state and not self.groupTest then self:Print("End the real loot session before starting a shared test.");return false end
     if not self:IsLeader() then
         self.ignoredTestSID=nil;self.lastSync=nil;self:RequestSync()
-        self:Print("Shared test: ask the group leader to run /nrt test. Your addon will receive the test items automatically.")
+        self:Print("Shared test: ask the group leader to run Settings > Advanced > Loot Council Test. Your addon will receive the test items automatically.")
         return false
     end
     self.state,self.rev,self.renderSession,self.selectedTracked,self.publicBaseline=nil,0,nil,nil,nil
@@ -438,7 +450,7 @@ function A:StartGroupTest()
     self.preparingGroupTest=nil
     self:Publish() -- One complete set of unreleased simulated copies.
     self:Render()
-    self:Print("GROUP TEST: "..#self.state.trackedLoot.." Forever items await release in the Master Looter’s Loot window. Queue individual items or Queue all to start 60-second responses for the group. Assign council/master in Settings. Real bag collection, trading and history saving are disabled. /nrt test refreshes; /nrt leave-test ends the shared test.")
+    self:Print("GROUP TEST: "..#self.state.trackedLoot.." Forever items await release in the Master Looter’s Loot window. Queue individual items or Queue all to start 60-second responses for the group. Assign council/master in Settings. Real bag collection, trading and history saving are disabled. Settings > Advanced > Loot Council Test refreshes; Stop Test in Settings > Advanced ends the shared test.")
     return true
 end
 

@@ -91,7 +91,7 @@ function A:NativeRecordFailure(token,reason)
     if not result.needsReview then
         result.needsReview=true
         self.nativeLoot.recordErrors=(self.nativeLoot.recordErrors or 0)+1
-        self:Print("A native delivery completed but its history record needs review. Check /nrt diagnostics.")
+        self:Print("A native delivery completed but its history record needs review. Check Settings > Advanced > Diagnostics.")
     end
     result.retryAt=self.Client:Uptime()+30
     self.lootRoutingStatus="Native delivery confirmed; history recording needs review"

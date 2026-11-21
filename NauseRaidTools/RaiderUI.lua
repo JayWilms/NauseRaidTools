@@ -135,13 +135,15 @@ end
 
 function A:BuildResponseRail(u,p,text,button)
     u.responseProgress=text(p,"",11,92,-42,635)
-    local rail=CreateFrame("Frame",nil,p)
-    rail:SetPoint("TOPLEFT",16,-58);rail:SetSize(56,300)
+    local rail=self:CreateScrollFrame(p)
+    rail:SetPoint("TOPLEFT",16,-58);rail:SetSize(45,258)
     u.responseRail=rail;u.responseItemButtons={}
-    for i=1,6 do
-        local b=button(rail,"",5,-(i-1)*43,40,function() end)
+    u.responseItemChild=CreateFrame("Frame",nil,rail)
+    u.responseItemChild:SetSize(45,1);rail:SetScrollChild(u.responseItemChild)
+    for i=1,40 do
+        local b=button(u.responseItemChild,"",5,-(i-1)*43,40,function() end)
         b:EnableMouseWheel(true)
-        b:SetScript("OnMouseWheel",function(_,delta) if delta~=0 then A:MoveResponseRail(delta>0 and -1 or 1) end end)
+        b:SetScript("OnMouseWheel",function(_,delta) if delta~=0 then A:ScrollLootList(rail,-delta*(u.responseRailPitch or 43)) end end)
         b:SetHeight(38);b:SetNormalTexture("");b:SetPushedTexture("")
         self:StylePanel(b)
         b.icon=b:CreateTexture(nil,"ARTWORK");b.icon:SetPoint("TOPLEFT",4,-4);b.icon:SetSize(30,30)
@@ -168,9 +170,9 @@ function A:BuildResponseRail(u,p,text,button)
     u.responseRailNext=button(rail,"v",28,-278,25,function() A:MoveResponseRail(1) end)
     self:StyleRailArrow(u.responseRailPrevious,-1);self:StyleRailArrow(u.responseRailNext,1)
     p:EnableMouseWheel(true)
-    p:SetScript("OnMouseWheel",function(_,delta) if delta~=0 then A:MoveResponseRail(delta>0 and -1 or 1) end end)
+    p:SetScript("OnMouseWheel",function(_,delta) if delta~=0 then A:ScrollLootList(rail,-delta*(u.responseRailPitch or 43)) end end)
     rail:EnableMouseWheel(true)
-    rail:SetScript("OnMouseWheel",function(_,delta) if delta~=0 then A:MoveResponseRail(delta>0 and -1 or 1) end end)
+    rail:SetScript("OnMouseWheel",function(_,delta) if delta~=0 then A:ScrollLootList(rail,-delta*(u.responseRailPitch or 43)) end end)
 end
 
 function A:ResponseEligibilityKey(rows,hidden)
@@ -186,15 +188,16 @@ function A:RenderResponseRail(rows,hidden)
     if not rows then rows,hidden=self:ResponseItems() end
     local u=self.ui
     local answered=0
+    local reveal
     for i,row in ipairs(rows) do
         if self:PersonalSelection(row.item) then answered=answered+1 end
-        if row.item.id==self.popupItem and self.responseRailSelected~=self.popupItem then self.responseRailPage=math.floor((i-1)/6) end
+        if row.item.id==self.popupItem and self.responseRailSelected~=self.popupItem then reveal=i end
     end
     self.responseRailSelected=self.popupItem
     local pages=math.max(1,math.ceil(#rows/6))
     self.responseRailPage=math.max(0,math.min(self.responseRailPage or 0,pages-1))
     for i,b in ipairs(u.responseItemButtons) do
-        local row=rows[self.responseRailPage*6+i]
+        local row=rows[i]
         b:SetShown(row~=nil);b.itemID=row and row.item.id
         b.eligibility=row and row.status;b.reason=row and row.reason
         if row then
@@ -206,17 +209,14 @@ function A:RenderResponseRail(rows,hidden)
         end
     end
     u.responseProgress:SetText(#rows>0 and (answered.." of "..#rows.." items answered") or self:ResponseEmptyMessage(hidden))
-    u.responseRailPage:SetText(#rows>6 and ((self.responseRailPage+1).."/"..pages) or "")
-    u.responseRailPrevious:SetShown(#rows>6);u.responseRailNext:SetShown(#rows>6)
-    u.responseRailPrevious:SetEnabled(self.responseRailPage>0);u.responseRailNext:SetEnabled(self.responseRailPage<pages-1)
-    self:RefreshRailArrow(u.responseRailPrevious);self:RefreshRailArrow(u.responseRailNext)
+    u.responseRailPage:Hide();u.responseRailPrevious:Hide();u.responseRailNext:Hide()
+    self:SizeLootScroll(u.responseRail,u.responseItemChild,#rows,u.responseRailPitch or 43,reveal)
     self.responseEligibilityKey=self:ResponseEligibilityKey(rows,hidden)
 end
 
 function A:MoveResponseRail(direction)
-    local rows,hidden=self:ResponseItems()
-    self.responseRailPage=math.max(0,math.min((self.responseRailPage or 0)+direction,math.max(0,math.ceil(#rows/6)-1)))
-    self:RenderResponseRail(rows,hidden)
+    if self.ui then self:ScrollLootList(self.ui.responseRail,direction*(self.ui.responseRailPitch or 43)) end
+
 end
 
 function A:TickResponseEligibility()

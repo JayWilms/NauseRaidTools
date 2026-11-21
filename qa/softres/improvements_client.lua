@@ -33,8 +33,8 @@ end
 return function(name)
  local a,env=client(name);patchEnvironment(env);env._G=env;a.ShowConfirmation=a.RealShowConfirmation
  local s={}
- for line in io.lines(companion.."/NauseSoftReserve/NauseSoftReserve.toc") do
-  if line:match("%.lua$") then assert(loadfile(companion.."/NauseSoftReserve/"..line,"t",env))("NauseSoftReserve",s) end
+ for line in io.lines(companion.."/NauseRaidTools/NauseRaidTools.toc") do
+  if line:match("^SoftRes/.*%.lua$") then assert(loadfile(companion.."/NauseRaidTools/"..line,"t",env))("NauseRaidTools",a) end
  end
- return a,env,s
+ return a,env,a.SoftRes
 end

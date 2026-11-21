@@ -15,7 +15,7 @@ function A:DiagnosticEvent(event,code)
 end
 function A:StartDiagnostics()
     self.diagnosticRecording,self.diagnosticEvents,self.diagnosticStarted=true,{},self.Client:Uptime()
-    self:Print("Local diagnostic recording started (latest 200 technical events). /nrt diagnostics stop ends it; /nrt diagnostics opens a report to copy. Nothing is uploaded.")
+    self:Print("Local diagnostic recording started (latest 200 technical events). the Stop Recording button ends it; Settings > Advanced > Diagnostics opens a report to copy. Nothing is uploaded.")
 end
 function A:DiagnosticReport()
     local lines={"Nause Raid Tools diagnostic report", "Addon: "..self.version.." | protocol "..self.protocol,
@@ -45,6 +45,14 @@ function A:DiagnosticReport()
     end
     lines[#lines+1]=string.format("Receive: %d fragments | %d decoded packets | %d decode failures | %d protocol mismatches",
         metrics.receivedFragments or 0,metrics.decodedPackets or 0,metrics.decodeFailures or 0,metrics.protocolMismatches or 0)
+    local sr=type(NauseSoftReserve)=="table" and NauseSoftReserve
+    if sr then
+        local state=sr.session
+        lines[#lines+1]="SoftRes: "..(sr.testGroup and "group test" or sr.test and "solo test" or "live")..
+            " | session "..(state and "present" or "none").." | role "..(sr:IsHost() and "host" or "member")
+        lines[#lines+1]="SoftRes snapshot: "..(state and (sr:ValidSnapshot(state) and "valid" or "INVALID") or "none")..
+            " | last host validation "..(sr.snapshotValidationError or "no error recorded")
+    end
     lines[#lines+1]="Role: "..(self:IsLeader() and "raid leader" or self:IsMaster() and "master looter" or self:IsCouncil() and "council" or "raider")
     lines[#lines+1]="Combat: "..(self.Client:Combat() and "paused/unknown" or "out of combat").." | response deadlines continue"
     lines[#lines+1]="Clocks: "..(self.Client:ClockReady() and "available" or "unavailable; mutations disabled")

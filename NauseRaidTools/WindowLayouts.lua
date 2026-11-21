@@ -100,6 +100,7 @@ function A:RefreshWindowLayers()
         end
     end
     self.nrtLayering=false
+    if self.PositionBuffReminderClicks then self:PositionBuffReminderClicks() end
 end
 
 function A:RegisterWindowLayers(frame)
@@ -240,6 +241,7 @@ end
 
 -- Dimensions are UI units; resizing never changes text or icon scale.
 local policies={
+    NauseRaidToolsMyAssignments={400,280,340,200,600,600,"middle",true},
     NauseRaidToolsResponses={760,380,680,380,900,475,"responses"},
     NauseRaidToolsMain={1100,640,1000,560,1300,800,"voting"},
     NauseRaidToolsTrade={820,440,680,300,960,620,"loot",true},
@@ -265,6 +267,7 @@ function A:WindowPolicy(frame)
     end
 end
 function A:CanResizeWindow(frame)
+    if frame.nrtRaidCheckVertical==true then return true end
     local p=self:WindowPolicy(frame)
     return p and p[8]==true or false
 end
@@ -391,10 +394,11 @@ function A:DefaultWindowPosition(frame)
     self:ClampWindowPosition(frame)
 end
 local resetWindowLabels={
+    NauseRaidToolsBuffReminders="Assigned Buff Reminders",
     NauseRaidToolsResponses="Response Window",NauseRaidToolsMain="Voting Window",
     NauseRaidToolsTrade="Loot Window",NauseRaidToolsTimer="Timer Window",
     NauseRaidToolsSettings="Settings Window",NauseRaidToolsHistory="History Window",
-    NauseRaidToolsReadiness="Pre-Raid Loot Check",
+    NauseRaidToolsReadiness="Pre-Raid Loot Check",NauseRaidToolsRaidChecks="Raid Check",NauseRaidToolsAssignments="Other Assignment Jobs",NauseRaidToolsAssignmentBoard="Assignments",NauseRaidToolsMyAssignments="My Assignments",
 }
 function A:WindowResetChoices()
     local choices={}
@@ -412,12 +416,14 @@ function A:ResetOneWindowLayout(name)
             local frame=entry.frame
             self:FinishWindowMove(frame,name)
             self:WindowLayoutStore()[name]=nil
+            if name=="NauseRaidToolsRaidChecks" then self:WindowLayoutStore().raidCheckHeight=nil end
             local policy=self:WindowPolicy(frame)
             if policy then self:ResizeReadableWindow(frame,policy[1],policy[2]) end
             self:DefaultWindowPosition(frame)
             self:SaveWindowLayout(frame,name)
             self:RefreshWindowChrome(frame)
             self:Render()
+            if name=="NauseRaidToolsRaidChecks" and self.RenderRaidChecks then self:RenderRaidChecks() end
             return true
         end
     end
@@ -426,9 +432,11 @@ end
 
 function A:ResetWindowLayout()
     local store=self:WindowLayoutStore()
+    store.raidCheckHeight=nil
     for _,entry in ipairs(self.windowFrames or {}) do store[entry.name]=nil end
     self:RestoreWindowLayouts()
     self:Render()
+    if self.RenderRaidChecks then self:RenderRaidChecks() end
 end
 
 function A:LayoutReadableWindow(frame)
@@ -441,31 +449,33 @@ function A:LayoutReadableWindow(frame)
         if width then object:SetWidth(width) end
         if height then object:SetHeight(height) end
     end
+    if frame==u.myAssignments then self:RenderMyAssignments();return end
     if frame==u.settingsHub then self:LayoutSettings();return end
     if frame==u.lootTimers.window then self:LayoutLootTimer();return end
     if frame==u.lootPanels.deliveries.window then
         local p=u.lootPanels.deliveries
         local old=p.visibleRows or 6
-        p.visibleRows=math.max(1,math.min(#p.rows,math.floor((h-165)/44)))
+        p.visibleRows=math.max(1,math.min(12,math.floor((h-165)/44)))
         if old~=p.visibleRows then p.page=math.floor((p.page or 0)*old/p.visibleRows) end
         frame.title:SetWidth(w-60)
-        local holderX=w-420
-        local actionX=w-282
+        local holderX=w-440
+        local actionX=w-302
         local itemWidth=holderX-56
         place(p.itemHeader,24,70,itemWidth+30)
         place(p.holderHeader,18+holderX,70,126)
         place(p.actionHeader,18+actionX,70,142)
         for _,header in ipairs({p.itemHeader,p.holderHeader,p.actionHeader}) do header:SetTextColor(.80,.74,.57) end
         for i,row in ipairs(p.rows) do
-            place(row,18,88+(i-1)*44,w-36,42)
+            place(row,0,(i-1)*44,w-58,42)
             row.caption:SetWidth(itemWidth)
             row.detail:SetWidth(itemWidth)
             place(row.holder,holderX,8,126)
             place(row.holderStatus,holderX,26,126)
             place(row.action,actionX,7,146)
             place(row.deadline,actionX,25,146)
-            place(row.trade,w-130,8,88)
+            place(row.trade,w-150,8,88)
         end
+        p.scroll:SetSize(w-58,p.visibleRows*44);p.child:SetWidth(w-58)
         place(p.empty,24,math.min(150,h*.4),w-48)
         place(p.previous,20,h-75);place(p.next,60,h-75)
         place(p.pageLabel,110,h-67,math.min(95,math.max(55,w-625)))
@@ -541,19 +551,18 @@ function A:LayoutReadableWindow(frame)
             place(b,92+(i-1)%3*step,buttonTop+math.floor((i-1)/3)*(compact and 30 or 34),step-10)
         end
         local pitch=compact and 33 or 43
-        u.responseRail:SetHeight(compact and 248 or 300)
+        u.responseRailPitch=pitch
+        u.responseRail:SetHeight(6*pitch)
         for i,b in ipairs(u.responseItemButtons) do place(b,5,(i-1)*pitch,compact and 33 or 40,compact and 32 or 38);b.icon:SetSize(compact and 24 or 30,compact and 24 or 30) end
         place(u.responseRailPage,0,6*pitch)
         place(u.responseRailPrevious,0,6*pitch+20)
         place(u.responseRailNext,28,6*pitch+20)
-        place(u.responsePrevious,92,h-45)
-        place(u.responseNext,w-128,h-45)
         local scale=u.responseVoting:GetEffectiveScale()
         if not finite(scale) or scale<=0 then scale=1 end
         local votingX=math.floor((92+(body-200)/2)*scale+.5)/scale
         place(u.responseVoting,votingX,h-45)
         self:StyleButtonOutline(u.responseVoting)
-        place(u.responseRoleHint,202,h-37,math.max(100,body-220))
+        place(u.responseRoleHint,92,h-37,body)
     elseif frame==u.main then
         -- All panels fit within the actual window; never crop a larger canvas.
         local compact=self:LootWindowLayout("voting")=="Compact"
@@ -585,15 +594,14 @@ function A:LayoutReadableWindow(frame)
         u.votingItemRail:SetHeight((self.votingItemRows or 9)*43)
         place(u.itemPages,15,h-182,50,14)
         place(u.itemPrev,16,h-162,22,22);place(u.itemNext,42,h-162,22,22)
-        place(u.candidatePrev,80,h-177,85);place(u.candidateNext,surface-91,h-177,85)
         place(u.playerPagePrevious,surface-210,h-137,95);place(u.playerPageNext,surface-110,h-137,95)
         if compact then
-            place(u.playerHistory,surface-208,h-177,110)
-            place(u.compareGear,surface-325,h-177,110)
-            place(u.selection,175,h-171,math.max(80,surface-510))
+            place(u.playerHistory,surface-125,h-177,110)
+            place(u.compareGear,surface-245,h-177,110)
+            place(u.selection,80,h-171,math.max(80,surface-340))
         else
-            place(u.selection,175,h-171,math.max(100,surface-455))
-            place(u.playerHistory,surface-270,h-177)
+            place(u.selection,80,h-171,math.max(100,surface-220))
+            place(u.playerHistory,surface-125,h-177,110)
         end
         place(u.votingProgress,80,h-137,surface-310)
         place(u.votingOwn,80,h-105,surface-90,42)
@@ -657,7 +665,8 @@ end
 function A:InstallWindowResizeGrip(frame,name)
     if type(frame.resizeGrip)=="table" or type(frame.resizeGrip)=="userdata" then return end
     local grip=CreateFrame("Button",nil,frame)
-    frame.resizeGrip=grip;grip:SetSize(18,18);grip:SetPoint("BOTTOMRIGHT",-3,3)
+    local inset=name=="NauseRaidToolsMyAssignments" and 6 or 3
+    frame.resizeGrip=grip;grip:SetSize(18,18);grip:SetPoint("BOTTOMRIGHT",-inset,inset)
     local level=frame:GetFrameLevel();if type(level)=="number" then grip:SetFrameLevel(level+20) end
     for i=1,3 do
         local line=grip:CreateTexture(nil,"ARTWORK");line:SetSize(i*4,1.5)

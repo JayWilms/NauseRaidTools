@@ -13,9 +13,10 @@ core = (source / 'Core.lua').read_text(encoding='utf-8')
 assert f'A.version = "{version}"' in core
 protocol = int(re.search(r'^A\.protocol = (\d+)$', core, re.M).group(1))
 assert core.count('self.state.responseDuration=60') == 2
-addons = [source, root / 'NauseSoftReserve']
+addons = [source]
 files = sorted(p for addon in addons for p in addon.rglob('*') if p.is_file())
-assert len([p for p in source.rglob('*') if p.is_file()]) == 41
+assert len([p for p in source.rglob('*') if p.is_file()]) == 85
+assert not (root / 'NauseSoftReserve').exists()
 assert all((addon / (addon.name + '.toc')).is_file() for addon in addons)
 output = root / 'outputs' / f'NauseRaidTools-{version}-install.zip'
 staged = root / 'work' / f'NauseRaidTools-{version}-verified.zip'
@@ -33,6 +34,6 @@ with zipfile.ZipFile(staged) as archive:
             if line.strip() and not line.startswith('#'):
                 assert addon.name + '/' + line.replace(chr(92), '/') in archive.namelist()
 staged.replace(output)
-print(f'Built and verified {version}: {len(files)} files across two addons, complete manifests, protocol {protocol}.')
+print(f'Built and verified {version}: {len(files)} files in one addon, complete manifests, protocol {protocol}.')
 print(output)
 print('SHA256:', hashlib.sha256(output.read_bytes()).hexdigest())

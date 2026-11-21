@@ -35,6 +35,28 @@ f.correctionToggle:GetScript("OnClick")()
 check(f:GetHeight()==750 and f.target:IsShown(),"correction controls did not expand into available space")
 f.reason:SetText("Old reason");f.rows[2]:GetScript("OnClick")()
 check(f:GetHeight()==650 and not f.target:IsShown() and f.reason:GetText()=="","switching awards retained correction state")
+-- A delivery completed inside OnClick must not leave its pooled button pressed.
+for _,award in ipairs(s.session.history) do
+    if award.status=="pending" then assert(s:ConfirmDelivery(award.id,award.revision)) end
+end
+local lootRows=a.ui.lootPanels.timer.rows
+for i,lootRow in ipairs(lootRows) do
+    lootRow.trade.testButtonState=i==1 and "PUSHED" or "NORMAL"
+    lootRow.trade.testHighlight=i==1
+    lootRow.trade.SetButtonState=function(button,state) button.testButtonState=state end
+    lootRow.trade.UnlockHighlight=function(button) button.testHighlight=false end
+end
+s:RenderSharedLootUI()
+local deliveredRows=0
+for _,lootRow in ipairs(lootRows) do
+    if lootRow:IsShown() then
+        deliveredRows=deliveredRows+1
+        check(lootRow.tradeLabel:GetText()=="Delivered" and not lootRow.trade:IsEnabled()
+            and lootRow.trade.testButtonState=="NORMAL" and not lootRow.trade.testHighlight,
+            "delivered loot retained a pressed/highlighted button or allowed another delivery")
+    end
+end
+check(deliveredRows>1,"delivery button check did not include multiple copies")
 assert(s:StopTest())
 
 -- Fill the supported log limit; every entry must be reachable with a small row pool.
@@ -52,3 +74,4 @@ assert(s:Command("cancel"));assert(s:QueuePugLoot(1))
 check(s.rollScrollOffset==0 and rolls.scroll:GetVerticalScroll()==0,"a new round inherited the old scroll position")
 assert(s:StopTest());check(a.Encode(e.NauseSoftReserveDB)==saved,"scrolling/award practice changed saved data")
 print("AWARD/ROLL LISTS PASS: "..count.." checks; pending/delivered filters, exact selection, delivery controls, corrections, scrolling and all 800 roll attempts")
+

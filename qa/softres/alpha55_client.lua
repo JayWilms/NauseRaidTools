@@ -4,7 +4,7 @@ local function check(condition, message)
     checked = checked + 1
     assert(condition, message)
 end
-local function client(name)
+local function client(name, bundled)
     local env = setmetatable({}, {__index = _G})
     local fake = {}
     local fakeMeta
@@ -32,6 +32,8 @@ local function client(name)
             if k == "GetWidth" then return rawget(self,"_width") or 1920 end
             if k == "GetHeight" then return rawget(self,"_height") or 1080 end
             if k == "SetScrollChild" then self._scrollChild=value;return end
+            if k == "GetVerticalScroll" then return rawget(self,"_offset") or 0 end
+            if k == "SetVerticalScroll" then self._offset=value;return end
             if k == "GetVerticalScrollRange" then
                 local child=rawget(self,"_scrollChild")
                 return math.max(0,(child and rawget(child,"_height") or 0)-self:GetHeight())
@@ -99,7 +101,7 @@ local function client(name)
     env.StaticPopup_Show = function() return {} end
     local a = {}
     for file in io.lines(root.."NauseRaidTools.toc") do
-        if file:match("%.lua$") then assert(loadfile(root..file,"t",env))("NauseRaidTools",a) end
+        if file:match("%.lua$") and (bundled or not file:match("^SoftRes/")) then assert(loadfile(root..file,"t",env))("NauseRaidTools",a) end
     end
     a.RealShowConfirmation=a.ShowConfirmation
     a.ShowConfirmation=function(self,...) return env.StaticPopup_Show(...) end

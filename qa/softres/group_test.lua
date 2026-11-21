@@ -20,6 +20,7 @@ local function run(mode)
         e.RandomRoll=function(low,high) native=native+1;queue[#queue+1]={roll=string.format("%s rolls 91 (%d-%d)",name,low,high)} end
         e.SendChatMessage=function() error("No test announcements or real trades") end
         e.NauseSoftReserveDB={schema=1,generation=45,session={id="saved-real-session"},history={{untouched=name}}}
+        if name~=names[1] then e.LibStub=nil;e.AtlasLoot=nil end
         c.confirm=function(...) return confirm(s,...) end
         c.saved=a.Encode(e.NauseSoftReserveDB)
         a.Send=function(_,p,target)
@@ -51,9 +52,116 @@ local function run(mode)
         c.s:CatalogueStep()
         local n=0;for _ in pairs(c.a.roster) do n=n+1 end
         check(n==3 and #c.s:BrowserResults()==8,mode.." used fake roster or external catalogue")
+        if c~=host then check(c.a:ItemLibrary()==nil and c.s.catalogueHostSID==host.s.session.id,mode.." member required a local loot database") end
         check(c.s.session.id==host.s.session.id and c.a.Encode(c.e.NauseSoftReserveDB)==c.saved,mode.." snapshot not shared or overwrote save")
     end
     check(host.s.sessionSetup.status:GetText():find("GROUP TEST",1,true),"group test mislabeled")
+    local notices={};local originalAnnounce=host.s.Announce;local sessionBefore=host.a.Encode(host.s.session)
+    host.s.Announce=function(self,message,channel) notices[#notices+1]={message=message,channel=channel};return originalAnnounce(self,message,channel) end
+    host.s.sessionSetup.announce:GetScript("OnClick")()
+    check(#notices==3 and notices[1].message:find("OPEN",1,true) and notices[2].message:find("!removesr",1,true)
+        and notices[2].message:find("!mysr",1,true) and notices[3].message:find("x2",1,true),"open-session announcement omitted reservation instructions")
+    for _,notice in ipairs(notices) do check(notice.channel==mode and #("[Nause SR] "..notice.message)<=255,"session announcement used the wrong channel or exceeded chat length") end
+    check(not peer.s:AnnounceSession(),"nonhost could announce the session")
+    check(host.a.Encode(host.s.session)==sessionBefore,"announcing changed the session")
+    host.s.session.locked=true;notices={};assert(host.s:AnnounceSession())
+    check(#notices==2 and notices[1].message:find("LOCKED",1,true) and not notices[2].message:find("!sr ",1,true),"locked-session announcement invited reservation changes")
+    host.s.session.locked=false
+    local reservesBefore=host.a.Copy(host.s.session.reserves)
+    host.s.session.reserves[names[2]]={host.s.testItems[1].id}
+    host.s.session.reserves[names[3]]=nil
+    host.s.session.reserves["Departed-Realm"]={}
+    notices={};host.s.sessionSetup.announceMissing:GetScript("OnClick")()
+    check(#notices==1 and notices[1].message:find(names[2].." (1 missing)",1,true)
+        and notices[1].message:find(names[3].." (2 missing)",1,true)
+        and not notices[1].message:find(names[1],1,true) and not notices[1].message:find("Departed",1,true),"missing SR announcement omitted partial picks or included full/departed players")
+    check(not peer.s:AnnounceMissingReservations(),"nonhost announced missing SRs")
+    host.s.session.history[#host.s.session.history+1]={winner=names[2],consumed=true}
+    local missing=host.s:MissingReservations()
+    check(#missing==1 and missing[1].name==names[3],"awarded SR slot was incorrectly announced as missing")
+    table.remove(host.s.session.history)
+    host.s.session.reserves[names[3]]={host.s.testItems[1].id,host.s.testItems[1].id}
+    host.s.session.reserves[names[2]]={host.s.testItems[1].id,host.s.testItems[1].id}
+    notices={};assert(host.s:AnnounceMissingReservations())
+    check(#notices==1 and notices[1].message:find("No missing SRs",1,true),"full raid lacked an all-submitted announcement")
+    host.s.session.reserves=reservesBefore
+    host.s.Announce=originalAnnounce
+
+    local whispers={}
+    host.e.SendChatMessage=function(message,channel,language,target)
+        check(channel=="WHISPER" and target==names[2] and message:find("[Nause SR] TEST: ",1,true)==1,"group test sent an unlabelled/public reservation response")
+        whispers[#whispers+1]=message
+    end
+    local whisperItem=host.s.testItems[1]
+    local chatEvent=host.s.chatEvents:GetScript("OnEvent")
+    check(host.s:ResolveReservationChatItem(whisperItem.link)==whisperItem.id,"full item hyperlink stopped resolving")
+    local catalogue=host.s.catalogue;host.s.catalogue={}
+    for _,decorated in ipairs({whisperItem.link,
+        "|TInterface/Icons/INV_Misc_QuestionMark:16|t"..whisperItem.link,
+        "|cnITEM_QUALITY3_COLOR:|Hitem:"..whisperItem.id..":0|hCustom display label|h|r",
+        "|Hitem:"..whisperItem.id..":0|h[|A:quality-icon:16:16|aDifferent display name]|h"}) do
+        local parsed=host.s:ParseReservationChatItems(decorated.." "..decorated,2)
+        check(parsed and #parsed==2 and parsed[1]==whisperItem.id and parsed[2]==whisperItem.id,
+            "decorated addon item link depended on its display name or local catalogue")
+    end
+    host.s.catalogue=catalogue
+    check(host.s:ResolveReservationChatItem("Unknown item name")==nil,"unknown name reserved an arbitrary item")
+    host.s.catalogue[2147483646]={id=2147483646,name=whisperItem.name,sources=host.s.catalogue[whisperItem.id].sources}
+    local scope=host.s.ScopeAllows;host.s.ScopeAllows=function() return true end
+    check(host.s:ResolveReservationChatItem(whisperItem.name)==nil,"ambiguous name selected an arbitrary item")
+    host.s.ScopeAllows=scope;host.s.catalogue[2147483646]=nil
+    chatEvent(host.s.chatEvents,"CHAT_MSG_WHISPER","!sr ["..whisperItem.name.."]",names[2]);pump()
+    check(#(host.s.session.reserves[names[2]] or {})==1 and #whispers==1,"group test did not accept a non-addon reservation whisper")
+    check(whispers[1]:find("["..whisperItem.name.."]",1,true),"reservation confirmation used IDs instead of item names")
+    now=now+3
+    chatEvent(host.s.chatEvents,"CHAT_MSG_WHISPER","!mysr",names[2])
+    check(#whispers==2 and whispers[2]:find("["..whisperItem.name.."]",1,true),"reserve query omitted item names")
+    local stacked=host.s:ReservationChatReplies({whisperItem.id,whisperItem.id},"Confirmed: ",2)
+    check(#stacked==1 and stacked[1]:find("["..whisperItem.name.."] x2 (2/2)",1,true),"stacked reserves lost their item name or quantity")
+    local originalName=host.s.ReservationChatName
+    host.s.ReservationChatName=function(_,id) return "[Long item "..id.." "..string.rep("a",70).."]" end
+    local longReplies=host.s:ReservationChatReplies({1,2,3,4,5,6},"Confirmed: ",6)
+    check(#longReplies>1,"long reserve lists were not split")
+    for _,reply in ipairs(longReplies) do check(#("[Nause SR] TEST: "..reply)<=240 and reply:find(" (6/6)",1,true),"long reply lost its total or exceeded chat length") end
+    local fullReply=table.concat(longReplies," ")
+    for id=1,6 do check(fullReply:find(host.s:ReservationChatName(id),1,true),"long reply cut off an item name") end
+    host.s.ReservationChatName=originalName
+    now=now+3
+    for _,legacy in ipairs({"!reserve ","!unreserve ","!myreserves "}) do
+        chatEvent(host.s.chatEvents,"CHAT_MSG_WHISPER",legacy..whisperItem.name,names[2])
+    end
+    check(#host.s.session.reserves[names[2]]==1 and #whispers==2,"removed chat commands were still accepted")
+    chatEvent(host.s.chatEvents,"CHAT_MSG_WHISPER","!removesr "..whisperItem.name:upper(),names[2]);pump()
+    check(#host.s.session.reserves[names[2]]==0 and #whispers==3,"removesr did not remove a named reservation")
+    now=now+3
+    chatEvent(host.s.chatEvents,"CHAT_MSG_WHISPER","!mysr",names[2])
+    check(#whispers==4 and whispers[4]:find("no confirmed reserves",1,true),"group test reserve query did not reply")
+    chatEvent(host.s.chatEvents,"CHAT_MSG_WHISPER","!sr "..whisperItem.id,"Outsider-Realm")
+    check(#whispers==4,"outsider whisper received a test response")
+    now=now+3
+    chatEvent(host.s.chatEvents,"CHAT_MSG_WHISPER","!sr "..whisperItem.id.." x2",names[2]);pump()
+    now=now+3
+    chatEvent(host.s.chatEvents,"CHAT_MSG_WHISPER","!removesr ["..whisperItem.name.."] x2",names[2]);pump()
+    check(#host.s.session.reserves[names[2]]==0,"removesr x2 did not remove both stacked reservations")
+    now=now+3
+    local ok,why=host.s:ProcessReserveChat("!removesr "..whisperItem.id,names[2])
+    check(ok==false and why=="That item is not reserved by you.","removesr accepted an item the player did not reserve")
+    for _,input in ipairs({whisperItem.link.." "..whisperItem.link,
+        "["..whisperItem.name.."] ["..whisperItem.name.."]",
+        whisperItem.name.." "..whisperItem.name}) do
+        now=now+3;assert(host.s:ProcessReserveChat("!sr "..input,names[2]));pump()
+        check(#host.s.session.reserves[names[2]]==2,"repeating an item did not add two reserves")
+        now=now+3;assert(host.s:ProcessReserveChat("!removesr "..input,names[2]));pump()
+        check(#host.s.session.reserves[names[2]]==0,"repeating an item did not remove two reserves")
+    end
+    now=now+3
+    check(not host.s:ProcessReserveChat("!sr ["..whisperItem.name.."] [Unknown item]",names[2])
+        and #host.s.session.reserves[names[2]]==0,"partly invalid multi-item command saved a partial reservation")
+    now=now+3
+    check(not host.s:ProcessReserveChat("!sr "..whisperItem.link.." "..whisperItem.link.." "..whisperItem.link,names[2])
+        and #host.s.session.reserves[names[2]]==0,"repeated links bypassed the reserve limit")
+    host.e.SendChatMessage=function() error("No test announcements or real trades") end
+    now=now+3
     assert(peer.s:Request("reserve",{host.s.testItems[1].id,host.s.testItems[1].id}));pump()
     check(#host.s.session.reserves[names[2]]==2 and not peer.s.pendingRequest,"group reservation acknowledgement failed")
     assert(host.s:Command("lock"));assert(host.s:QueuePugLoot(1));pump()
@@ -83,8 +191,9 @@ local function run(mode)
     peer.a:LeaveTest();pump()
     check(not peer.s.test and host.s.testGroup and third.s.testGroup,"member exit ended everyone else's test")
     peer.a:Packet(names[1],peer.a.Copy(stale));check(not peer.s.test,"queued snapshot rejoined a member who left")
-    now=now+6;assert(peer.s:StartTest());pump()
-    check(peer.s.testGroup and peer.s.session.id==activeID,"explicit participant rejoin failed")
+    now=now+6;peer.e.SlashCmdList.NAUSERAIDTOOLS("softres");pump()
+    check(peer.s.testGroup and peer.s.session.id==activeID,"opening nrtsr did not rejoin the leader's active group test")
+    check(peer.s.browser.scope:GetText():find("Fixture Dungeon",1,true) and peer.s.catalogueHostSID==activeID,"joined member could not see selected content and shared loot")
     -- Losing a delta must recover using the isolated sync path.
     local dropped=false
     host.s.session.lootEntries[2].seconds=280;host.s.session.revision=host.s.session.revision+1;host.s:Publish();host.s:FlushSync()
@@ -98,6 +207,7 @@ local function run(mode)
         check(c.s.session.limit==3 and c.s.session.selectedInstances["Fixture Dungeon"] and not c.s.session.selectedInstances["Fixture Raid"],"group test did not share the leader's content and reserve limit")
     end
     check(host.s.session.id~=activeID and peer.s.session.id==host.s.session.id and #host.s.session.history==0,"host restart did not reset all clients")
+    check(peer.s.browser.scope:GetText()=="Content: Fixture Dungeon","reservation header did not update when the selected dungeon changed")
     host.a:LeaveTest();pump()
     for _,c in pairs(clients) do check(not c.s.test and not c.s.session and not c.a.demo and c.a.Encode(c.e.NauseSoftReserveDB)==c.saved,"host exit failed to clean up or preserve data") end
     -- Active real sessions refuse an incoming test.

@@ -7,6 +7,8 @@ SRC=ROOT/'NauseRaidTools'
 
 FRAMES=r'''
 A={confirmationDialogs={}}
+function A:FullDisplayName(name) return name end
+function A:DisplayNames(names) return names end
 local methods={}
 local mt={__index=function(f,key)
     if methods[key] then return methods[key] end

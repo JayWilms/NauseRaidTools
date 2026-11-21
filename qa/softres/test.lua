@@ -1,5 +1,5 @@
 local folder=assert(debug.getinfo(1,"S").source:sub(2):match("^(.*)/qa/softres/test.lua$"))
-local root=folder.."/NauseSoftReserve/"
+local root=folder.."/NauseRaidTools/SoftRes/"
 local S={};local count=0
 local function check(ok,why) count=count+1;assert(ok,why) end
 local function load(name) return assert(loadfile(root..name))("NauseSoftReserve",S) end
@@ -167,19 +167,19 @@ base.me="Raider-Realm"
 check(not S:ChooseRun("Guild Run"),"leader-loss race started guild run")
 base.me="Leader-Realm"
 check(S:ChooseRun("Guild Run") and base.state and not S.session,"Guild Run routed to wrong workflow")
-check(not S:Begin(2),"PuG started during Guild Run")
-check(not S:Command("resume"),"PuG recovery started during Guild Run")
+check(not S:Begin(2),"SoftRes started during Guild Run")
+check(not S:Command("resume"),"SoftRes recovery started during Guild Run")
 check(not S:ShowRunChooser(),"mode switch allowed during Guild Run")
 base:Act("end")
-check(not S:ChooseRun("PuG Run",7) and not S.session,"invalid SR limit started session")
-check(S:ChooseRun("PuG Run",2) and S.session.limit==2 and not base.state,"PuG Run routed to wrong workflow")
-check(base.ui.start.text=="Open PuG session" and base.ui.finish.enabled,"settings did not reflect PuG session")
+check(not S:ChooseRun("SoftRes Run",7) and not S.session,"invalid SR limit started session")
+check(S:ChooseRun("SoftRes Run",2) and S.session.limit==2 and not base.state,"SoftRes Run routed to wrong workflow")
+check(base.ui.start.text=="Loot Council" and not base.ui.start.enabled and base.ui.finish.enabled,"settings did not reflect SoftRes session")
 check(not base:Reduce("Leader-Realm",{op="start"}),"direct Guild reducer bypassed mode guard")
-check(not base:ResumeSession(),"Guild recovery overlapped PuG session")
+check(not base:ResumeSession(),"Guild recovery overlapped SoftRes session")
 base.ui.finish.scripts.OnClick()
 check(popup=="NAUSE_SR_END_RUN","settings End used Guild confirmation for PuG")
 StaticPopupDialogs.NAUSE_SR_END_RUN.OnAccept({data={sid=S.session.id}})
-check(not S.session and base.ui.start.text=="Start session","PuG End failed to restore idle settings")
+check(not S.session and base.ui.start.text=="Loot Council","SoftRes End failed to restore idle settings")
 base.demo=true;base:Act("start")
 check(base.state and not S.session,"solo demo no longer uses existing start path")
 base.demo=nil;base.state=nil
@@ -217,7 +217,7 @@ function db:GetInstances() return {{name="Fixture Raid"},{name="Second Raid"}} e
 local previousSources=db.GetSources
 function db:GetSources(id) if id==12345 then return {} end;if id==284716 then return {{instance="Second Raid",boss="Boss C"}} end;return previousSources(self,id) end
 load("PugSetup.lua")
-check(S:ChooseRun("PuG Run",2) and not S.session,"PuG selection started before scope confirmation")
+check(S:ChooseRun("SoftRes Run",2) and not S.session,"SoftRes selection started before scope confirmation")
 check(not S:ConfirmPugSetup(),"empty scope started run")
 S.setupSelection={["Fixture Raid"]=true,["Second Raid"]=true}
 check(S:ConfirmPugSetup() and S.session.selectedInstances["Second Raid"],"multi-instance confirmation failed")

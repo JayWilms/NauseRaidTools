@@ -63,11 +63,43 @@ function A:RaidSettings()
 end
 A.raidSetupOperations={responseDuration=true,responseOptions=true,master=true,council=true,
     selfVotes=true,rules=true,warningSettings=true,announcementSetting=true,lootConfiguration=true,recoveryAssistant=true}
+local function sameProfileValue(a,b)
+    if type(a)~=type(b) then return false end
+    if type(a)~="table" then return a==b end
+    for k,v in pairs(a) do if not sameProfileValue(v,b[k]) then return false end end
+    for k in pairs(b) do if a[k]==nil then return false end end
+    return true
+end
+function A:ProfileConfiguration(c)
+    local setup=self:CleanRaidSetup(c)
+    return {master=c.masterFallback or setup.master or self.me,council=setup.council,selfVotes=setup.selfVotes,rules=setup.rules,
+        responseOptions=self:CleanResponses(c.responseOptions) or self:DefaultResponses(),responseDuration=c.responseDuration or 60,
+        warningSettings=self:CleanWarningSettings(c.warningSettings) or self:DefaultWarningSettings(),
+        announcementSettings=c.announcementSettings or {tracked=false,responses=true,awards=true},
+        lootConfiguration=self:CleanLootConfiguration(c.lootConfiguration) or self:DefaultLootConfiguration(),recoveryAssistant=setup.recoveryAssistant or false}
+end
+function A:RaidProfileInfo()
+    self:InitStorage()
+    if self.state then
+        local name=self.state.raidProfileName
+        if type(name)~="string" or #name>40 or name:find("[%c|]") then return "Custom setup",false end
+        local baseline=self.state.raidProfileBaseline
+        return name,self.state.raidProfileModified==true or (type(baseline)=="table" and not sameProfileValue(self:ProfileConfiguration(self.state),baseline))
+    end
+    local name=NauseRaidToolsDB.raidSetup.profile
+    local profile=name and NauseRaidToolsDB.profiles[name]
+    if not profile then return "Custom setup",false end
+    return name,not sameProfileValue(self:ProfileConfiguration(self:RaidSettings()),self:ProfileConfiguration(profile))
+end
+function A:RaidProfileLabel()
+    local name,modified=self:RaidProfileInfo()
+    return name..(modified and " — Modified since loading" or "")
+end
 function A:RememberRaidSettings(settings,profile)
     if self.demo then return end
     local c=settings or self.state;if not c then return end
     self:InitStorage();local d=NauseRaidToolsDB
-    d.raidSetup=self:CleanRaidSetup(c);d.raidSetup.profile=profile
+    d.raidSetup=self:CleanRaidSetup(c);d.raidSetup.profile=profile or c.profile or c.raidProfileName
     d.raidSetup.master=c.masterFallback or d.raidSetup.master
     d.responseOptions=self:CleanResponses(c.responseOptions) or self:DefaultResponses()
     d.responseDuration=c.responseDuration
@@ -137,7 +169,7 @@ function A:ApplyIdleRaidSetting(op,p)
     elseif op=="warningSettings" then c.warningSettings=self:CleanWarningSettings(p.settings);if not c.warningSettings then return false end
     elseif op=="lootConfiguration" then c.lootConfiguration=self:CleanLootConfiguration(p.settings);if not c.lootConfiguration then return false end
     end
-    self:RememberRaidSettings(c);self:Changed();return true
+    self:RememberRaidSettings(c,c.profile);self:Changed();return true
 end
 function A:SessionRaidSettings()
     local c=self:RaidSettings();local missing={}
@@ -147,7 +179,7 @@ function A:SessionRaidSettings()
     if c.recoveryAssistant and not self:IsRaidAssistant(c.recoveryAssistant) then c.recoveryAssistant=nil end
     c.masterFallback=c.master
     if not self.roster[c.master] then c.master=self.me end
-    if #missing>0 then table.sort(missing);self:Print("Skipped absent council: "..table.concat(missing,", ")) end
+    if #missing>0 then table.sort(missing);self:Print("Skipped absent council: "..table.concat(self:DisplayNames(missing),", ")) end
     if c.lootConfiguration.automatic then
         for _,r in ipairs(c.lootConfiguration.rules) do
             if r.action=="assign" and r.target~="@master" and not self.roster[r.target] then
@@ -208,7 +240,7 @@ function A:LoadProfile(name)
     end
     local master = self:SetupMemberName(p.master) or self.me
     table.sort(missing)
-    if #missing > 0 then self:Print("Skipped absent council: " .. table.concat(missing, ", ")) end
+    if #missing > 0 then self:Print("Skipped absent council: " .. table.concat(self:DisplayNames(missing), ", ")) end
     local accepted=self:Act("profile", {responseOptions=self:CleanResponses(p.responseOptions) or self:DefaultResponses(), master = master, council = council, selfVotes = p.selfVotes == true, rules = copy(p.rules or self:DefaultVoting()), responseDuration = self:ValidResponseDuration(p.responseDuration) and p.responseDuration or 60, warningSettings=self:CleanWarningSettings(p.warningSettings) or self:DefaultWarningSettings(),lootConfiguration=self:CleanLootConfiguration(p.lootConfiguration) or self:DefaultLootConfiguration()})
     if accepted~=false then NauseRaidToolsDB.raidSetup.profile=name end
     return accepted
@@ -252,7 +284,7 @@ end
 
 function A:ResumeSession()
     if self.recoveryPending or self.recoveryHasNewer then
-        self:Print("The saved checkpoint could be stale. Use /nrt sync to retry recovery.");return false
+        self:Print("The saved checkpoint could be stale. Use Settings > Advanced > Resynchronise to retry recovery.");return false
     end
     if not self:RecoveryAvailable() then self:Print("No compatible saved session from the last 12 hours is available for this raid leader."); return false end
     local saved = NauseRaidToolsDB.checkpoints[self.me]
@@ -419,9 +451,9 @@ function A:RaidSetupReview(draft)
     local c=draft.settings
     local lines,issues={"|cffd8b35aLoot Team|r"},{}
     local actual,status=self:ReadGameMaster()
-    lines[#lines+1]="Master Looter: "..(actual or c.master or self.me or "Choose a player")
+    lines[#lines+1]="Master Looter: "..self:FullDisplayName(actual or c.master or self.me or "Choose a player")
     if actual and draft.previousMaster and actual~=draft.previousMaster then
-        issues[#issues+1]="Loot team: WoW now uses "..actual.." instead of saved Master Looter "..draft.previousMaster.."."
+        issues[#issues+1]="Loot team: WoW now uses "..self:FullDisplayName(actual).." instead of saved Master Looter "..self:FullDisplayName(draft.previousMaster).."."
     end
     if actual and actual~=c.master then issues[#issues+1]="Loot team: WoW's Master Looter changed. Return to step 1 to confirm." end
     if status=="pending" or status=="restricted" then issues[#issues+1]="Loot team: wait for WoW to report the Master Looter." end
@@ -429,12 +461,12 @@ function A:RaidSetupReview(draft)
     local names={}
     for name in pairs(c.council) do
         names[#names+1]=name
-        if not self.roster[name] then issues[#issues+1]="Loot team: "..name.." is absent and will be skipped." end
+        if not self.roster[name] then issues[#issues+1]="Loot team: "..self:FullDisplayName(name).." is absent and will be skipped." end
     end
     table.sort(names)
-    lines[#lines+1]="Council: "..(#names>0 and table.concat(names,", ") or "Master Looter only")
+    lines[#lines+1]="Council: "..(#names>0 and table.concat(self:DisplayNames(names),", ") or "Master Looter only")
     lines[#lines+1]="The active Master Looter also has a council seat."
-    lines[#lines+1]="Backup Raid Assistant: "..(c.recoveryAssistant or "None selected")
+    lines[#lines+1]="Backup Raid Assistant: "..(c.recoveryAssistant and self:FullDisplayName(c.recoveryAssistant) or "None selected")
     if c.recoveryAssistant and not self:IsRaidAssistant(c.recoveryAssistant) then
         issues[#issues+1]="Loot team: backup assistant is absent or no longer promoted and will be skipped."
     end

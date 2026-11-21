@@ -27,7 +27,17 @@ local a,e,s,start,finish,advance=client()
 assert(start("tie"));assert(s:Command("lock"));assert(s:QueuePugLoot(1))
 check(#s.session.round.attempts==2 and s.session.round.attempts[1].value==s.session.round.attempts[2].value,"tie preset did not produce equal valid rolls")
 assert(s:Command("close"));check(#s.session.round.winners==2,"tie scenario did not require a reroll")
-assert(s:Command("reroll"));assert(s:Command("close"))
+local tiedNames=a.Copy(s.session.round.winners)
+local tieMessages={};local originalAnnounce=s.Announce
+s.Announce=function(self,message) tieMessages[#tieMessages+1]=message;return originalAnnounce(self,message) end
+s:AnnounceTiedPlayers(s.session.round,false)
+assert(s:Command("reroll"))
+check(tieMessages[1]:find("Tied players (SR 85): ",1,true) and tieMessages[2]:find("Reroll players: ",1,true),"tie and reroll announcements omitted their player lists")
+for _,name in ipairs(tiedNames) do
+    check(tieMessages[1]:find(name,1,true) and tieMessages[2]:find(name,1,true),"tie announcement omitted an eligible tied player")
+end
+s.Announce=originalAnnounce
+assert(s:Command("close"))
 check(#s.session.round.winners==1,"scripted tie-break failed to produce a winner")
 assert(s:Command("record"));check(#s.session.history==0 and a.confirmationContext,"tie preset bypassed award confirmation")
 assert(a:AcceptConfirmation());finish()
@@ -35,7 +45,13 @@ assert(a:AcceptConfirmation());finish()
 assert(start("invalid"));assert(s:Command("lock"));assert(s:QueuePugLoot(1))
 check(s.session.round.duration==5 and #s.session.round.attempts==2,"no-valid preset did not set a short timer and logged attempts")
 for _,row in ipairs(s.session.round.attempts) do check(not row.valid,"no-valid preset contained an eligible roll") end
+local closedItem=s:LootEntry(s.session.round.lootEntry).link
+local expiryMessage
+local announce=s.Announce
+s.Announce=function(self,message) expiryMessage=message;return announce(self,message) end
 advance(6);assert(s:ExpireRound())
+check(expiryMessage and expiryMessage:find("Rolling closed for "..closedItem,1,true),"expiry announcement used an ID instead of the collected item link")
+s.Announce=announce
 check(s.session.round.closed and #s.session.round.winners==0 and not s.leaderRollUI.primary:IsEnabled(),"expiry offered an award without a winner")
 finish()
 

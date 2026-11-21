@@ -4,8 +4,8 @@ local function move(object,parent,x,y,width,height)
     if width then object:SetWidth(width) end
     if height then object:SetHeight(height) end
 end
-local pageOrder={"Session","Loot Configuration","Responses","Council","Alerts","Announcements","Display","Profiles","Advanced"}
-local pageDescriptions={["Loot Configuration"]="Choose what is collected, who receives automatic assignments and why.",Session="Manage this raid and its pre-raid checks.",Responses="Configure raid choices and personalise your colours.",Council="Assign loot authority and set council voting rules.",Alerts="Control trade-expiry warnings and sounds.",Announcements="Choose which loot events appear in Raid chat.",Display="Personal window layout and opening preferences.",Profiles="Reuse your raid configuration.",Advanced="Check addon versions, session recovery and diagnostics."}
+local pageOrder={"Session","Raid Tools","Loot Configuration","Responses","Council","Alerts","Announcements","Display","Profiles","Advanced"}
+local pageDescriptions={["Raid Tools"]="Check group readiness and manage raid assignments.",["Loot Configuration"]="Choose what is collected, who receives automatic assignments and why.",Session="Manage this raid and its pre-raid checks.",Responses="Configure raid choices and personalise your colours.",Council="Assign loot authority and set council voting rules.",Alerts="Control trade-expiry warnings and sounds.",Announcements="Choose which loot events appear in Raid chat.",Display="Personal window layout and opening preferences.",Profiles="Reuse your raid configuration.",Advanced="Check addon versions, session recovery and diagnostics."}
 local togglePath="Interface\\AddOns\\NauseRaidTools\\Assets\\"
 local function switch(control)
     control:SetSize(76,26);control:SetBackdrop(nil)
@@ -31,8 +31,8 @@ local function switchValue(control,on)
     control:GetFontString():SetTextColor(enabled and .78 or .40,enabled and .80 or .42,enabled and .84 or .46)
 end
 function A:SetSettingsToggle(control,on) switchValue(control,on) end
-function A:BindSettingsDropdown(control,choices,action,button)
-    local function toggle() self:OpenSettingsDropdown(control,type(choices)=="function" and choices() or choices,action) end
+function A:BindSettingsDropdown(control,choices,action,button,width)
+    local function toggle() self:OpenSettingsDropdown(control,type(choices)=="function" and choices() or choices,action,width) end
     control:SetScript("OnClick",toggle)
     local arrow=button(control,"",0,0,28,toggle)
     control.dropdownArrow=arrow;arrow:SetBackdropColor(.16,.17,.20,1)
@@ -60,7 +60,7 @@ function A:RaidMemberChoices(role)
     local council=self:RaidSettings().council
     for _,name in ipairs(names) do
         if role~="council" or not self.state or self.state.master~=name or council[name] then
-            choices[#choices+1]={name..(role=="council" and council[name] and " (Council)" or ""),name}
+            choices[#choices+1]={self:FullDisplayName(name)..(role=="council" and council[name] and " (Council)" or ""),name}
         end
     end
     return choices
@@ -71,7 +71,7 @@ function A:BuildRaidMemberPickers(parent,button,dropdown)
         local control=button(parent,"Choose current group member",0,0,250,function() end)
         dropdown(control,function() return A:RaidMemberChoices(role) end,function(name)
             if not A:RaidMemberPickerEditable(role) or not A.roster[name] then return end
-            field:SetText(name);field:ClearFocus()
+            field:SetText(A:FullDisplayName(name));field:ClearFocus()
         end)
         return control
     end
@@ -100,7 +100,7 @@ function A:BuildRaidMemberPickers(parent,button,dropdown)
         if #choices==0 then A:CloseSettingsDropdown();return end
         A:OpenSettingsDropdown(field,choices,function(name)
             if not A:RaidMemberPickerEditable("master") or not A.roster[name] then return end
-            field:SetText(name);field:ClearFocus()
+            field:SetText(A:FullDisplayName(name));field:ClearFocus()
         end)
     end)
     local arrow=field.dropdownArrow
@@ -273,10 +273,10 @@ function A:BuildSettingsUI(u,window,text,button,edit)
     self:BuildLootConfigurationUI(u,window,text,button,edit,dropdown,position,section,row,switch)
     local session=u.settingsPages.Session.content
     section(session,"Raid Session",0)
-    description(session,"Review your saved raid setup below, then start a session. Resume restores its saved session instead.",26)
+    description(session,"Choose Loot Council or SoftRes. Resume Saved restores your previous Loot Council session.",26)
     u.raidSetupSummary=text(session,"",12,0,-58,690)
     position(u.raidSetupSummary,session,0,58,function(w) return w end,76);u.raidSetupSummary:SetJustifyV("TOP")
-    section(session,"Session Takeover",246)
+    section(session,"Session Takeover",286)
     u.recoveryAssistant=button(session,"No Raid Assistant selected",0,0,210,function() end)
     dropdown(u.recoveryAssistant,function()
         local choices={{"Clear selection",false}}
@@ -285,7 +285,7 @@ function A:BuildSettingsUI(u,window,text,button,edit)
         end
         return choices
     end,function(name) A:Act("recoveryAssistant",{target=name}) end)
-    row(session,"Backup Raid Assistant","Receives a private recovery copy for use if the Raid Leader and Master Looter are unavailable.",280,u.recoveryAssistant,210)
+    row(session,"Backup Raid Assistant","Receives a private recovery copy for use if the Raid Leader and Master Looter are unavailable.",320,u.recoveryAssistant,210)
     u.takeOverSession=button(session,"Take Over Loot Session",0,0,210,function()
         if A.recoveryFailed then A:RetryRecovery();A:RenderRecoveryPreview()
         else A:TakeOverSession() end
@@ -295,22 +295,29 @@ function A:BuildSettingsUI(u,window,text,button,edit)
         local loot=A.ui.lootPanels.timer.window
         if loot:IsShown() then A:FocusWindow(loot) end
     end)
-    u.takeOverStatus=text(session,"",11,0,-340,450)
+    u.takeOverStatus=text(session,"",11,0,-380,450)
     u.takeOverStatus:SetJustifyV("TOP")
-    position(u.takeOverStatus,session,0,340,function(w) return w end,88)
-    position(u.takeOverSession,session,0,438,210,28)
-    position(u.reviewRecoveredLoot,session,220,438,210,28)
-    section(session,"Before The Raid",504)
-    row(session,"Loot readiness","Review addon replies, loot roles and recovery backups.",538,u.readiness,180)
-    session:SetHeight(602)
-    local setup=button(session,"Set Up Raid",0,0,180,function() A:ShowRaidSetup(false) end)
-    local review=button(session,"Review Saved Setup",0,0,210,function() A:ShowRaidSetup(true) end)
+    position(u.takeOverStatus,session,0,380,function(w) return w end,88)
+    position(u.takeOverSession,session,0,478,210,28)
+    position(u.reviewRecoveredLoot,session,220,478,210,28)
+    section(session,"Before The Raid",544)
+    row(session,"Loot readiness","Review addon replies, loot roles and recovery backups.",578,u.readiness,180)
+    session:SetHeight(642)
+    u.start:SetText("Loot Council")
+    u.start:SetScript("OnClick",function() A:ShowLootCouncilStart() end)
+    u.softResStart=button(session,"SoftRes",0,0,180,function()
+        local sr=type(NauseSoftReserve)=="table" and NauseSoftReserve
+        if not sr then A:Print("Enable Nause Soft Reserve to start a SoftRes run.");return end
+        if sr.session then sr:Show() else local ok,why=sr:ShowPugSetup();if why then sr:Print(why) end end
+    end)
+    u.resume:SetText("Resume Saved")
     local help=button(session,"Guild Member Help",0,0,230,function() A:ShowRaidMemberHelp() end)
-    for i,control in ipairs({setup,review,help,u.start,u.resume,u.finish}) do
-        local column=(i-1)%3
-        local y=i<=3 and 142 or 182
-        position(control,session,function(w) return column*(w+10)/3 end,y,function(w) return (w-20)/3 end,30)
+    for i,control in ipairs({u.start,u.softResStart,u.resume,u.finish}) do
+        local column=(i-1)%2
+        position(control,session,function(w) return column*(w+10)/2 end,i<=2 and 142 or 182,function(w) return (w-10)/2 end,30)
     end
+    position(help,session,0,222,function(w) return w end,28)
+    self:BuildLootCouncilStartUI(u,window,text,button,dropdown)
     u.raidMemberHelp=window("NauseRaidToolsMemberHelp","Guild Member Help",600,506,true)
     local helpSections={
         {"Raid Setup","Your Raid Leader configures the session, loot roles and council."},
@@ -327,6 +334,56 @@ function A:BuildSettingsUI(u,window,text,button,edit)
     end
     button(u.raidMemberHelp,"Close",200,-456,200,function() u.raidMemberHelp:Hide() end)
     self:BuildRaidSetupUI(u,window,text,button,edit)
+    local raidTools=u.settingsPages["Raid Tools"].content
+    section(raidTools,"Auto Invite",0)
+    description(raidTools,"Invite players who whisper your keyword. These settings apply to this character and do not require a loot session.",30)
+    u.autoInviteToggles={}
+    for _,item in ipairs({{"enabled","Enable Auto Invite","Listen for your keyword. Requires group leader or raid assistant permissions.",80},{"guildOnly","Guild members only","Only invite matching members from your loaded guild roster.",220},{"convert","Auto-convert to raid","When five members have joined, convert to raid before sending further invites. Off for dungeon parties.",290}}) do
+        local key=item[1]
+        local control=button(raidTools,"",0,0,76,function() local settings=A:AutoInviteSettings();A:SetAutoInviteSetting(key,not settings[key]) end)
+        switch(control);u.autoInviteToggles[key]=control;row(raidTools,item[2],item[3],item[4],control,76)
+    end
+    local keyword=CreateFrame("Frame",nil,raidTools);keyword:SetSize(200,26)
+    u.autoInviteKeyword=edit(keyword,0,0,114,"");u.autoInviteKeyword.hint:Hide();u.autoInviteKeyword:SetMaxLetters(32)
+    local function saveKeyword()
+        if A:SetAutoInviteSetting("keyword",u.autoInviteKeyword:GetText()) then u.autoInviteKeyword:ClearFocus() end
+    end
+    u.autoInviteSave=button(keyword,"Save",122,0,78,saveKeyword)
+    u.autoInviteKeyword:SetScript("OnEnterPressed",saveKeyword)
+    row(raidTools,"Whisper keyword","One word; capitals are ignored. Match the whole message. Default: inv.",150,keyword,200)
+    u.autoInviteStatus=description(raidTools,"",360)
+    section(raidTools,"Assigned Buff Reminders",430)
+    description(raidTools,"A personal reminder for the buffs and groups assigned to you. Hides in combat and refreshes afterwards. Recipients do not need NRT.",460)
+    u.buffReminderToggles={}
+    for _,item in ipairs({{"enabled","Show rebuff reminders","Show confirmed missing buffs from your whole-raid assignments. Unreadable players are not called missing.",510},{"expiring","Warn before expiry","Also remind you when an assigned buff has less than one minute remaining.",580}}) do
+        local key=item[1]
+        local control=button(raidTools,"",0,0,76,function() local settings=A:BuffReminderSettings();A:SetBuffReminderSetting(key,not settings[key]) end)
+        switch(control);u.buffReminderToggles[key]=control;row(raidTools,item[2],item[3],item[4],control,76)
+    end
+    section(raidTools,"Raid Readiness",720)
+    description(raidTools,"Review ready replies, offline/dead players, core buffs and consumables. No loot session or member addon is required.",750)
+    local openRaidCheck=button(raidTools,"Open Raid Check",0,0,220,function() A:ShowRaidChecks() end)
+    position(openRaidCheck,raidTools,0,806,220,30)
+    local assignments=button(raidTools,"Assignments",230,0,220,function() A:ShowAssignments() end)
+    u.openAssignments=assignments
+    position(assignments,raidTools,230,806,220,30)
+    u.raidCheckOptionToggles={}
+    for index,definition in ipairs(self.raidCheckDefinitions) do
+        local key=definition.key
+        local control=button(raidTools,"",0,0,76,function() A:SetRaidCheckSetting(key,not A:RaidCheckSettings()[key]) end)
+        switch(control);u.raidCheckOptionToggles[key]=control
+        local help=definition.provider and "Check when its provider class is in the group. Intellect applies to mana classes." or "Check for a recognised active effect. Disable this for runs that do not require it."
+        if definition.observe then
+            help="Show present blessings automatically. Turn on to require this effect when a Paladin is present."
+            if definition.physical then help="Require Might for Warriors, Rogues and Hunters. Present Might is shown on any class."
+            elseif definition.mana then help="Require Wisdom for mana classes. Present Wisdom is shown on any class."
+            end
+        end
+        row(raidTools,(definition.observe and "Require " or "")..definition.label,help,870+(index-1)*70,control,76)
+    end
+    local raidCheckFooter=870+#self.raidCheckDefinitions*70+14
+    description(raidTools,"Paladin requirements start off so one Paladin is not expected to supply every blessing. Enable the effects your group plans to use. Unknown data is never called missing.",raidCheckFooter)
+    raidTools:SetHeight(raidCheckFooter+80)
     local display=u.settingsPages.Display.content
     section(display,"Window Layout",0)
     u.lockWindows=button(display,"",0,0,76,function() A:SetWindowPositionsLocked(not A:WindowPositionsLocked()) end);switch(u.lockWindows)
@@ -664,7 +721,11 @@ function A:RenderSettingsDropdown()
         local choice=menu.choices[menu.offset+i]
         b:ClearAllPoints();b:SetPoint("TOPLEFT",7,-4-(i-1)*30);b:SetSize(menu:GetWidth()-(maximum>0 and 30 or 14),28)
         b:SetShown(choice~=nil)
-        if choice then b.label:SetText(choice[1]) end
+        if choice then
+            b.label:SetText(choice[1])
+            local color=type(choice[3])=="table" and choice[3]
+            b.label:SetTextColor(color and color.r or .9,color and color.g or .91,color and color.b or .93)
+        end
     end
 end
 
@@ -766,21 +827,72 @@ function A:RenderSettingsPreview()
     u.responsePreview:SetHeight(60+math.ceil(#shown/3)*42)
 end
 
+function A:BuildLootCouncilStartUI(u,window,text,button,dropdown)
+    local f=window("NauseRaidToolsLootCouncilStart","Loot Council",570,450,true);u.lootCouncilStart=f
+    u.lootCouncilStartSummary=text(f,"",12,24,-58,522);u.lootCouncilStartSummary:SetHeight(88);u.lootCouncilStartSummary:SetJustifyV("TOP")
+    u.lootCouncilQuickStart=button(f,"Quick Start",24,-154,522,function()
+        if A.state then return end
+        A.guidedGuildStart=true
+        local ok,result=pcall(A.Act,A,"start")
+        A.guidedGuildStart=nil
+        if not ok then error(result) end
+        if A.state then
+            f:Hide();if u.settingsHub then u.settingsHub:Hide() end
+            u.main:Show();A:FocusWindow(u.main)
+        end
+    end)
+    button(f,"Load Raid Profile",24,-196,522,function()
+        u.lootCouncilProfile:Show();u.lootCouncilApplyProfile:Show()
+    end)
+    button(f,"Set Up Raid",24,-238,522,function() f:Hide();A:ShowRaidSetup(false) end)
+    u.lootCouncilProfile=button(f,"Choose a saved profile",24,-292,350,function() end)
+    dropdown(u.lootCouncilProfile,function()
+        local choices={};for name in pairs(NauseRaidToolsDB.profiles or {}) do choices[#choices+1]={name,name} end
+        table.sort(choices,function(a,b) return a[1]<b[1] end);return choices
+    end,function(name) f.selectedProfile=name;u.lootCouncilProfile:SetText(name);u.lootCouncilApplyProfile:SetEnabled(true) end)
+    u.lootCouncilApplyProfile=button(f,"Load Profile",386,-292,160,function()
+        if A.state or not f.selectedProfile then return end
+        if A:LoadProfile(f.selectedProfile) then
+            A:RenderRaidSetupSummary();u.lootCouncilQuickStart:SetText("Start Session")
+        end
+    end)
+    local hint=text(f,"Load a profile to review it above, then choose Start Session. Quick Start uses the setup shown above.",11,24,-340,522);hint:SetHeight(44)
+    button(f,"Cancel",184,-400,200,function() f:Hide() end)
+end
+function A:ShowLootCouncilStart()
+    if self.state then self.ui.main:Show();self:FocusWindow(self.ui.main);return true end
+    self:BuildUI()
+    local u=self.ui;local f=u.lootCouncilStart
+    f.selectedProfile=nil;u.lootCouncilProfile:SetText("Choose a saved profile");u.lootCouncilProfile:Hide();u.lootCouncilApplyProfile:Hide();u.lootCouncilApplyProfile:SetEnabled(false)
+    u.lootCouncilQuickStart:SetText("Quick Start")
+    u.lootCouncilQuickStart:SetEnabled(self:IsLeader() and self.Client:InRaid() and not self.recoveryPending and not self.recoveryHasNewer)
+    self:RenderRaidSetupSummary();f:Show();self:FocusWindow(f);return true
+end
+
 function A:RenderRaidSetupSummary()
     local u=self.ui;if not u or not u.raidSetupSummary then return end
+    if u.softResStart then
+        local sr=type(NauseSoftReserve)=="table" and NauseSoftReserve
+        u.softResStart:SetEnabled(sr and not self.state and not self.recoveryPending and not self.demo and (sr.session or self:IsLeader()) and true or false)
+    end
+    u.start:SetText(self.state and "Open Loot Council" or "Loot Council")
+    u.start:SetEnabled(not self.demo and not self.recoveryPending and (self.state~=nil or self:IsLeader()))
     local c=self:RaidSettings();local names={}
     for name in pairs(c.council) do names[#names+1]=name end
     if self.state and c.master and not c.masterBlocked and not c.council[c.master] then names[#names+1]=c.master end
     table.sort(names)
-    local profile=self.state and "Session configuration" or NauseRaidToolsDB.raidSetup.profile or "Custom setup"
+    local profile=self:RaidProfileLabel()
     local members={}
     for i=1,math.min(2,#names) do members[#members+1]=self:DisplayName(names[i]) end
     local memberSummary=#names>0 and (table.concat(members,", ")..(#names>2 and (" +"..(#names-2).." more • Council tab") or "")) or "No council members configured."
+    if u.lootCouncilStartSummary then
+        u.lootCouncilStartSummary:SetText("Raid profile: "..profile.."\n"..c.responseDuration.." seconds to respond | "..#names.." council members\nMaster Looter: "..(c.master and self:FullDisplayName(c.master) or "Raid Leader"))
+    end
     u.raidSetupSummary:SetMaxLines(6)
     u.raidSetupSummary:SetText((self.state and "Active session" or "Next session").." | Profile: "..profile..
         "\nResponse timer: "..c.responseDuration.."s | Council: "..#names..
         " | Collection: "..(c.lootConfiguration.collection and "Quality Rules" or "Off")..
-        "\nMaster Looter: "..(c.master or "Raid Leader")..
+        "\nMaster Looter: "..(c.master and self:FullDisplayName(c.master) or "Raid Leader")..
         " | Automatic awards: "..(c.lootConfiguration.automatic and "On" or "Off")..
         "\n"..memberSummary)
 end
@@ -904,6 +1016,14 @@ end
 function A:RenderSettings()
     if not self.ui or not self.ui.settingsHub then return end
     local u,cfg=self.ui,self:WarningSettings()
+    local invites=self:AutoInviteSettings()
+    for key,control in pairs(u.autoInviteToggles or {}) do switchValue(control,invites[key]) end
+    if u.autoInviteKeyword and not u.autoInviteKeyword:HasFocus() then u.autoInviteKeyword:SetText(invites.keyword) end
+    if u.autoInviteStatus then u.autoInviteStatus:SetText(self:AutoInviteStatusText()) end
+    local reminders=self:BuffReminderSettings()
+    for key,control in pairs(u.buffReminderToggles or {}) do switchValue(control,reminders[key]) end
+    local raidChecks=self:RaidCheckSettings()
+    for key,control in pairs(u.raidCheckOptionToggles or {}) do switchValue(control,raidChecks[key]) end
     self:RenderMasterSettings()
     u.archiveCompleted:SetShown(self:IsMaster())
     u.archiveCompleted:SetEnabled(self:IsMaster() and #self:ArchivableItems()>0)
@@ -979,7 +1099,7 @@ function A:RenderAddonCheck()
             if correct then ready=ready+1 end
             local role=council[name] and "Council" or ""
             if name==assistant then role=role=="" and "Backup" or role..", Backup" end
-            row.player:SetText(role=="" and name or name.." ("..role..")")
+            row.player:SetText(self:FullDisplayName(name)..(role=="" and "" or " ("..role..")"))
             row.addon:SetText(status)
             row.version:SetText(known and ("v"..entry.version) or "—")
             local red,green=correct and 0.3 or 1,correct and 0.85 or 0.3
@@ -1009,7 +1129,7 @@ function A:RenderTradeAlerts(show)
             local remaining,status=self:TradeRemaining(entry)
             local item=entry.item and self:ItemByID(entry.item)
             local label=type(remaining)=="number" and remaining>0 and ("~"..math.ceil(remaining/60).." min remaining") or "Timer unavailable — awaiting holder"
-            lines[#lines+1]={remaining=remaining or math.huge,text=(notice.level=="urgent" and "URGENT: " or "Trade reminder: ")..entry.link.."\n"..label.." | Holder: "..entry.holder.." | Winner: "..(item and item.winner or "Awaiting award")}
+            lines[#lines+1]={remaining=remaining or math.huge,text=(notice.level=="urgent" and "URGENT: " or "Trade reminder: ")..entry.link.."\n"..label.." | Holder: "..self:FullDisplayName(entry.holder).." | Winner: "..(item and self:FullDisplayName(item.winner) or "Awaiting award")}
         end
     end
     table.sort(lines,function(a,b) return a.remaining<b.remaining end)
@@ -1098,21 +1218,21 @@ function A:RenderMasterSettings()
     if not s and self.Client:InGroup() then name,status=self:ReadGameMaster() end
     local pending=self.masterHandoff
     local message
-    if self.demo and s then message="Test Master Looter: "..s.master
+    if self.demo and s then message="Test Master Looter: "..self:FullDisplayName(s.master)
     elseif (s and s.masterBlocked) or status=="pending" or status=="restricted" then
         message="Waiting for WoW’s Master Looter. Loot actions are paused."
     elseif s then
-        message="Current Master Looter: "..s.master..(s.masterSource=="game" and " (WoW)" or " (Nause)")
+        message="Current Master Looter: "..self:FullDisplayName(s.master)..(s.masterSource=="game" and " (WoW)" or " (Nause)")
     elseif name then
-        message="Current Master Looter: "..name.." (WoW)"
+        message="Current Master Looter: "..self:FullDisplayName(name).." (WoW)"
     else
-        message="Saved Master Looter: "..(self:RaidSettings().master or "Raid Leader")
+        message="Saved Master Looter: "..self:FullDisplayName(self:RaidSettings().master or "Raid Leader")
     end
     if pending and pending.sid==(s and s.id) and self:IsLeader() and not self.demo then
-        message=message.."\n"..(pending.message or ("Waiting for WoW to confirm "..pending.target.."."))
+        message=message.."\n"..(pending.message or ("Waiting for WoW to confirm "..self:FullDisplayName(pending.target).."."))
     end
     self.ui.masterStatus:SetText(message)
-    self.ui.masterCouncil:SetText(s and not s.masterBlocked and (s.master.." is on the council as Master Looter.")
+    self.ui.masterCouncil:SetText(s and not s.masterBlocked and (self:FullDisplayName(s.master).." is on the council as Master Looter.")
         or "The active Master Looter is automatically on the council.")
 end
 
@@ -1171,7 +1291,7 @@ function A:BuildRaidSetupUI(u,window,text,button,edit)
         local names={}
         for name in pairs(seen) do names[#names+1]=name end
         table.sort(names)
-        for _,name in ipairs(names) do choices[#choices+1]={(draft.settings.council[name] and "Remove " or "Add ")..name,name} end
+        for _,name in ipairs(names) do choices[#choices+1]={(draft.settings.council[name] and "Remove " or "Add ")..self:FullDisplayName(name),name} end
         return choices
     end,function(name)
         local council=A.raidSetupDraft.settings.council
@@ -1355,15 +1475,15 @@ function A:RenderRaidSetup()
     if draft.step==1 then
         local actual=self:ReadGameMaster()
         if actual then c.master=actual end
-        p.master:SetText(c.master or "Raid Leader")
+        p.master:SetText(c.master and self:FullDisplayName(c.master) or "Raid Leader")
         p.master:SetEnabled(not actual)
         local names={}
         for name in pairs(c.council) do names[#names+1]=name end
         table.sort(names)
         p.council:SetText(#names.." selected - click to add or remove")
-        p.assistant:SetText(c.recoveryAssistant or "None selected")
+        p.assistant:SetText(c.recoveryAssistant and self:FullDisplayName(c.recoveryAssistant) or "None selected")
         local shown={}
-        for i=1,math.min(8,#names) do shown[#shown+1]=names[i] end
+        for i=1,math.min(8,#names) do shown[#shown+1]=self:FullDisplayName(names[i]) end
         p.team:SetText("Selected council: "..(#names>0 and table.concat(shown,", ") or "Master Looter only")..
             (#names>8 and (" (+"..(#names-8).." more in Review)") or "")..
             "\n\nThe active Master Looter has a council seat. An optional backup assistant must be promoted in WoW.")

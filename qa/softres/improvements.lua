@@ -118,13 +118,14 @@ check(not v.s.pendingRequest and v.s.requestStatus:find("timed out",1,true),"req
 pump()
 -- Chat submissions by a non-addon raider use exactly the same validation.
 now=now+3;local whispers={};e.SendChatMessage=function(text,channel,_,target) whispers[#whispers+1]={text,channel,target} end
-check(s:ProcessReserveChat("!unreserve 279259",names[4]),"chat cancellation failed")
-now=now+3;check(s:ProcessReserveChat("!reserve 279260",names[4]),"chat reservation failed")
-now=now+3;check(s:ProcessReserveChat("!myreserves",names[4]),"chat query failed")
-check(#whispers==3 and whispers[3][2]=="WHISPER" and whispers[3][3]==names[4],"chat did not reply privately")
-now=now+3;check(not s:ProcessReserveChat("!reserve Staff",names[4]),"ambiguous name accepted")
-now=now+3;check(s:ProcessReserveChat("!reserve 279259","Outsider-Realm")==nil,"outsider changed reservations")
-assert(s:Command("lock"));now=now+3;check(not s:ProcessReserveChat("!reserve 279259",names[4]),"chat bypassed lock")
+check(s:ProcessReserveChat("!unreserve 279259",names[4])==nil,"removed unreserve command was accepted")
+assert(s:Reserve(s.session,names[4],{},"in-game"))
+now=now+3;check(s:ProcessReserveChat("!sr 279260",names[4]),"chat reservation failed")
+now=now+3;check(s:ProcessReserveChat("!mysr",names[4]),"chat query failed")
+check(#whispers==2 and whispers[2][2]=="WHISPER" and whispers[2][3]==names[4],"chat did not reply privately")
+now=now+3;check(not s:ProcessReserveChat("!sr Staff",names[4]),"ambiguous name accepted")
+now=now+3;check(s:ProcessReserveChat("!sr 279259","Outsider-Realm")==nil,"outsider changed reservations")
+assert(s:Command("lock"));now=now+3;check(not s:ProcessReserveChat("!sr 279259",names[4]),"chat bypassed lock")
 -- Uncached metadata remains pending, then enters the browser on native data arrival.
 local available=false
 function a:ItemLibrary() return {Search=function() return {{id=900001}} end,GetName=function() return available and "Delayed Staff" or nil end,GetSources=function() return {{instance="Forever Raid",boss="Boss"}} end} end

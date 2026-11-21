@@ -54,24 +54,24 @@ end
 function A:FormatAwardHistory(record, player)
     local lines = {
         (player and record.winner ~= player and "[Corrected away] " or "") .. date("%d %b %Y %H:%M", record.time or 0)
-            .. " | " .. tostring(record.winner) .. " | " .. (record.responseLabel or self.responses[record.response] or "Unknown"),
+            .. " | " .. self:FullDisplayName(tostring(record.winner)) .. " | " .. (record.responseLabel or self.responses[record.response] or "Unknown"),
         (record.item or "Unknown item") .. ((record.quantity or 1)>1 and (" ×"..record.quantity) or "") .. " (" .. (record.votes or 0) .. " votes)" .. (record.timeSource ~= "award" and " [time observed]" or ""),
     }
     if record.awardReason then lines[#lines+1]="Assignment reason: "..record.awardReason..(record.awardNote and record.awardNote~="" and " | "..record.awardNote or "")..(record.automatic and " (quality rule)" or "") end
     if #(record.corrections or {}) > 0 then
         local original = record.original or record
-        lines[#lines + 1] = "Original award: " .. date("%d %b %Y %H:%M", original.time or 0) .. " | " .. tostring(original.winner)
-            .. " | " .. (original.responseLabel or self.responses[original.response] or "Unknown") .. " | by " .. tostring(original.master) .. " | " .. (original.votes or 0) .. " votes"
+        lines[#lines + 1] = "Original award: " .. date("%d %b %Y %H:%M", original.time or 0) .. " | " .. self:FullDisplayName(tostring(original.winner))
+            .. " | " .. (original.responseLabel or self.responses[original.response] or "Unknown") .. " | by " .. self:FullDisplayName(tostring(original.master)) .. " | " .. (original.votes or 0) .. " votes"
         for _, correction in ipairs(record.corrections) do
             lines[#lines + 1] = "Correction " .. (correction.revision - 1) .. ": " .. date("%d %b %Y %H:%M", correction.time)
-                .. " | " .. correction.from .. " to " .. correction.to .. " | by " .. correction.by .. "\nReason: " .. correction.reason
+                .. " | " .. self:FullDisplayName(correction.from) .. " to " .. self:FullDisplayName(correction.to) .. " | by " .. self:FullDisplayName(correction.by) .. "\nReason: " .. correction.reason
         end
     end
     if record.delivery then
         local delivery = record.delivery
-        lines[#lines + 1] = "Delivery: " .. delivery.status .. " | Recorded holder: " .. delivery.holder .. (delivery.method=="automatic" and " (game-confirmed trade)" or delivery.method=="masterloot_native" and " (native Master Loot confirmation; bag GUID unverified)" or delivery.method=="masterloot" and " (Master Loot and verified recipient bag)" or " (manual tracking)")
+        lines[#lines + 1] = "Delivery: " .. delivery.status .. " | Recorded holder: " .. self:FullDisplayName(delivery.holder) .. (delivery.method=="automatic" and " (game-confirmed trade)" or delivery.method=="masterloot_native" and " (native Master Loot confirmation; bag GUID unverified)" or delivery.method=="masterloot" and " (Master Loot and verified recipient bag)" or " (manual tracking)")
         for _, event in ipairs(delivery.log or {}) do
-            lines[#lines + 1] = "Delivery log: " .. date("%d %b %Y %H:%M", event.time) .. " | " .. event.action .. " | by " .. tostring(event.by) .. (event.to and (" | to " .. event.to) or "")
+            lines[#lines + 1] = "Delivery log: " .. date("%d %b %Y %H:%M", event.time) .. " | " .. event.action .. " | by " .. self:FullDisplayName(tostring(event.by)) .. (event.to and (" | to " .. self:FullDisplayName(event.to)) or "")
         end
     end
     return table.concat(lines, "\n") .. "\n"

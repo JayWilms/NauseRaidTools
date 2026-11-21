@@ -116,6 +116,31 @@ function A:CreateScrollFrame(parent)
     return scroll
 end
 
+-- Scroll children contain the complete bounded session list, so item identity never
+-- depends on a page or recycled row. Native clipping handles partial rows.
+function A:SizeLootScroll(scroll,child,count,pitch,selected)
+    local height=math.max(1,count*pitch)
+    scroll.nrtListChild=child
+    child:SetHeight(height)
+    local viewport=scroll:GetHeight() or 1
+    local range=math.max(0,height-viewport)
+    local offset=math.max(0,math.min(range,scroll:GetVerticalScroll() or 0))
+    if selected then
+        local top=(selected-1)*pitch
+        if top<offset then offset=top elseif top+pitch>offset+viewport then offset=top+pitch-viewport end
+    end
+    scroll:SetVerticalScroll(math.max(0,math.min(range,offset)))
+    self:RefreshScrollChrome(scroll,range,scroll:GetVerticalScroll())
+end
+function A:ScrollLootList(scroll,delta)
+    if not scroll then return end
+    local child=scroll.nrtListChild
+    local range=child and math.max(0,child:GetHeight()-scroll:GetHeight()) or scroll:GetVerticalScrollRange()
+    scroll:SetVerticalScroll(math.max(0,math.min(range, (scroll:GetVerticalScroll() or 0)+delta)))
+    self:RefreshScrollChrome(scroll,range,scroll:GetVerticalScroll())
+    if GameTooltip then GameTooltip:Hide() end
+end
+
 -- Link insertion moved between chat namespaces across client branches.
 -- Post-hooks leave Blizzard/other addons' click handling and return values intact.
 function A:CaptureManualLootLink(link)
@@ -304,7 +329,7 @@ local function window(name, title, w, h, transient, escapeCloses)
     A:StylePanel(f,34)
     f.title = text(f, title, 14, 18, -18, w - 60)
     A:LayoutTitleText(f.title,18,w-60,34)
-    local close = button(f,"×",0,0,22,function() f:Hide() end)
+    local close = button(f,"Ã—",0,0,22,function() f:Hide() end)
     close:SetSize(22,22);close:ClearAllPoints();close:SetPoint("TOPRIGHT", -6, -6)
     A:StyleCrossButton(close)
     f.closeButton=close
@@ -400,11 +425,10 @@ function A:BuildUI()
     self:BuildLootTimerUI(u, window, text, button)
     u.railLabel = text(f, "SESSION ITEMS", 12, 20, -185, 200)
     u.itemButtons = {}
-    for i = 1, 9 do
+    for i = 1, 40 do
         local row = i
-        local b = button(f, "", 20, -210 - (i - 1) * 36, 220, function()
-            local item=A.state and A.state.items[(A.itemPage or 0)*(A.votingItemRows or 9)+row]
-            A.selectedItem = item and item.id
+        local b = button(f, "", 20, -210 - (i - 1) * 36, 220, function(control)
+            A.selectedItem = control.itemID
             A.candidatePage, A.selectedCandidate = 0, nil
             A:Render()
         end)
@@ -481,7 +505,7 @@ function A:BuildUI()
     u.toggleCouncil = button(c, "Add / remove", 395, -165, 140, function() A:Act("council", {target = u.councilName:GetText()}) end)
     u.selfVotes = button(c, "", 20, -215, 250, function() A:Act("selfVotes") end)
     u.votingRules = button(c, "Voting rules", 290, -215, 245, function() u.rules:Show(); A:RenderVotingStatus() end)
-    u.responseSeconds = edit(c, 25, -265, 155, "Response time: 5–600 seconds")
+    u.responseSeconds = edit(c, 25, -265, 155, "Response time: 5â€“600 seconds")
     u.responseSeconds:SetMaxLetters(3)
     u.applyResponseTimer = button(c, "Apply response timer", 205, -265, 330, function()
         A:Act("responseDuration", {duration = tonumber(u.responseSeconds:GetText())})
@@ -621,8 +645,6 @@ function A:BuildUI()
         u.responseButtons[i]:SetHighlightFontObject(responseFont)
         u.responseButtons[i]:SetDisabledFontObject(responseDisabledFont)
     end
-    u.responsePrevious=button(p, "Previous", 92, -380, 95, function() A:CyclePopup(-1) end)
-    u.responseNext=button(p, "Next", 632, -380, 95, function() A:CyclePopup(1) end)
     u.responseRoleHint=text(p, "Everyone can respond, regardless of their role.", 11, 207, -388, 410)
     u.responseVoting=button(p,"Open Voting",285,-380,200,function() A:ShowVoting() end)
     self:StyleButtonOutline(u.responseVoting)
@@ -638,7 +660,7 @@ function A:BuildUI()
     placeholder:SetPoint("LEFT",8,0);placeholder:SetPoint("RIGHT",-8,0)
     placeholder:SetJustifyH("LEFT");placeholder:SetMaxLines(1)
     placeholder:SetTextColor(0.50,0.52,0.55)
-    placeholder:SetText("Search: Name, Date (DD/MM/YYYY), or Item — Shift-click an item to link")
+    placeholder:SetText("Search: Name, Date (DD/MM/YYYY), or Item â€” Shift-click an item to link")
     u.historySearch.placeholder=placeholder
     u.historySearch:SetScript("OnTextChanged",function(box)
         box.placeholder:SetShown(box:GetText()=="")
@@ -757,15 +779,18 @@ function A:BuildUI()
     u.endSessionCancel=button(u.endSession,"Cancel",260,-186,220,function() A:CloseEndSession() end)
     u.endSession.closeButton:SetScript("OnClick",function() A:CloseEndSession() end)
     u.endSession:SetScript("OnHide",function() A.endSessionContext=nil end)
+    self:BuildRaidChecksUI(u,window,text,button)
     self:BuildSettingsUI(u,window,text,button,edit)
+    self:BuildAssignmentsUI(u,window,text,button,edit)
+    self:BuildBuffRemindersUI(u,window,text)
     self:BuildPersonalColorUI(u,window,text,button,edit)
     self:BuildDiagnosticUI(u,window,text,button)
     self:BuildAuditUI(u,window,text)
     self:BuildHistoryExportUI(u,window,text,button)
     if self.BuildVersionCheckUI then self:BuildVersionCheckUI(u,window,text,button) end
-    u.launcher=window("NauseRaidToolsLauncher","Nause Raid Tools",320,205)
+    u.launcher=window("NauseRaidToolsLauncher","Nause Raid Tools",320,250)
     u.launcherButtons={}
-    for i,name in ipairs({"Responses","Voting","Loot","Timer","History","Settings"}) do
+    for i,name in ipairs({"Raid Check","My Assignments","Responses","Voting","Loot","Timer","History","Settings"}) do
         local b=button(u.launcher,name,16+((i-1)%2)*148,-53-math.floor((i-1)/2)*45,140,function() A:OpenLauncherOption(name) end)
         b:SetHeight(34);u.launcherButtons[name]=b
     end
@@ -817,7 +842,9 @@ function A:OpenLauncherOption(name)
     self:BuildUI()
     if name=="Voting" and not self:CanViewCouncil() then self:RenderLauncher();return false end
     if name=="Loot" and not self:CanViewLoot() then self:RenderLauncher();return false end
-    if name=="Responses" then self:ShowResponses()
+    if name=="Raid Check" then self:ShowRaidChecks()
+    elseif name=="My Assignments" then self:ShowMyAssignments(false)
+    elseif name=="Responses" then self:ShowResponses()
     elseif name=="Voting" then self:ShowVoting()
     elseif name=="Loot" then self:ShowLootWindow("timer")
     elseif name=="Timer" then self:ShowLootTimers()
@@ -853,6 +880,8 @@ function A:Render()
         self.popupSeen,self.responseReceipts,self.pendingPersonalResponses = {},{},{}
         self.popupPinned,self.responseRailSelected,self.responseEligibilityKey=nil,nil,nil
         self.responseRailPage=0
+        self.votingRailSelected=nil
+        u.responseRail:SetVerticalScroll(0);u.votingItemRail:SetVerticalScroll(0)
         self.noteDrafts,self.noteDraftKey,self.candidateOrders={},nil,{}
     end
     self.renderSession = s and s.id
@@ -861,7 +890,7 @@ function A:Render()
     if not reviewRole then u.main:Hide();u.voting:Hide() end
     u.responseVoting:SetShown(reviewRole);u.responseVoting:SetEnabled(reviewRole)
     u.responseRoleHint:SetShown(not reviewRole)
-    u.status:SetText((self.demo and (self:TestLabel().." | ") or "") .. (s and ("Leader: " .. s.leader .. "  |  Master looter: " .. s.master .. (s.masterBlocked and " (waiting for game role)" or (s.masterSource == "game" and " (game)" or " (addon)"))) or "No active session. The raid leader starts and configures it."))
+    u.status:SetText((self.demo and (self:TestLabel().." | ") or "") .. (s and ("Leader: " .. self:FullDisplayName(s.leader) .. "  |  Master looter: " .. self:FullDisplayName(s.master) .. (s.masterBlocked and " (waiting for game role)" or (s.masterSource == "game" and " (game)" or " (addon)"))) or "No active session. The raid leader starts and configures it."))
     if self.recoveryPending then u.status:SetText("Recovering the loot session. Loot actions are paused.") end
     u.start:SetEnabled(self:IsLeader() and not s and not self.recoveryPending)
     u.finish:SetEnabled(self:IsLeader() and s ~= nil and not self.manualRecovery)
@@ -889,12 +918,12 @@ function A:Render()
     local names = {}
     for name in pairs(self:RaidSettings().council) do names[#names + 1] = name end
     table.sort(names)
-    u.councilList:SetText("Council: " .. (#names > 0 and table.concat(names, ", ") or "None assigned") .. "\n\nThe leader and master looter vote only if added to the council.")
+    u.councilList:SetText("Council: " .. (#names > 0 and table.concat(self:DisplayNames(names), ", ") or "None assigned") .. "\n\nThe leader and master looter vote only if added to the council.")
     if s and not self:ItemByID(self.selectedItem) then self.selectedItem=s.items[1] and s.items[1].id end
     if s then self.itemPage=math.min(self.itemPage or 0,math.max(0,math.ceil(#s.items/(self.votingItemRows or 9))-1)) end
     for i, b in ipairs(u.itemButtons) do
-        local id = (self.itemPage or 0) * (self.votingItemRows or 9) + i
-        local item = (i<=(self.votingItemRows or 9) and s and s.items[id]) or nil
+        local item = s and s.items[i]
+        b.itemID=item and item.id
         b:SetShown(item ~= nil)
         if b.voteMark then
             local awarded = item and item.status == "awarded" and item.winner ~= nil
@@ -915,21 +944,18 @@ function A:Render()
             b:SetScript("OnEnter",nil);b:SetScript("OnLeave",nil)
         end
     end
-    local itemPages=math.max(1,math.ceil((s and #s.items or 0)/(self.votingItemRows or 9)))
-    u.itemPages:SetText(itemPages>1 and (((self.itemPage or 0)+1).."/"..itemPages) or "")
-    u.itemPages:SetShown(itemPages>1)
-    u.itemPrev:SetShown(itemPages>1);u.itemNext:SetShown(itemPages>1)
-    u.itemPrev:SetEnabled((self.itemPage or 0)>0);u.itemNext:SetEnabled((self.itemPage or 0)<itemPages-1)
-    self:RefreshRailArrow(u.itemPrev);self:RefreshRailArrow(u.itemNext)
+    u.itemPages:Hide();u.itemPrev:Hide();u.itemNext:Hide()
+    local reveal
+    if self.votingRailSelected~=self.selectedItem then
+        for i,entry in ipairs(s and s.items or {}) do if entry.id==self.selectedItem then reveal=i;break end end
+    end
+    self.votingRailSelected=self.selectedItem
+    self:SizeLootScroll(u.votingItemRail,u.votingItemChild,s and #s.items or 0,43,reveal)
     local item = s and self:ItemByID(self.selectedItem or 1)
-    local selectedIndex=1
-    for i,v in ipairs(s and s.items or {}) do if v.id==self.selectedItem then selectedIndex=i;break end end
-    u.candidatePrev:SetEnabled(item~=nil and selectedIndex>1)
-    u.candidateNext:SetEnabled(item~=nil and selectedIndex<#s.items)
     u.itemTitle:SetText(item and item.link or (not s and "No active session" or (#s.items==0 and "No loot queued" or "Select an item")))
     u.itemIcon:SetTexture(self:ItemIcon(item)); u.itemIcon:SetShown(item ~= nil)
     u.votingItemHover:SetShown(u.votingCompactLayout==true and item~=nil)
-    u.itemStatus:SetText(item and ("Status: " .. item.status .. (item.winner and "  |  Winner: " .. item.winner or "")) or "")
+    u.itemStatus:SetText(item and ("Status: " .. item.status .. (item.winner and "  |  Winner: " .. self:FullDisplayName(item.winner) or "")) or "")
     u.itemDetails:SetText(item and self:ItemSummary(item) or "")
     local candidates = {}
     local ballotView = item and self:VisibleVoting(item)
@@ -1090,8 +1116,8 @@ function A:RenderCorrection()
     local limitReached = item and #(item.corrections or {}) >= 10
     local allowed = current and not limitReached and self:IsMaster() and target
     u.correctionItem:SetText(item and item.link or "Select an awarded item from the loot desk")
-    u.correctionCurrent:SetText(item and ("Current winner: " .. item.winner .. " | Award revision: " .. (item.awardRevision or 1)) or "No active award selected")
-    u.correctionTargetDropdown:SetText(target and c.target or (#choices>0 and "Choose a replacement" or "No eligible replacement"))
+    u.correctionCurrent:SetText(item and ("Current winner: " .. self:FullDisplayName(item.winner) .. " | Award revision: " .. (item.awardRevision or 1)) or "No active award selected")
+    u.correctionTargetDropdown:SetText(target and self:FullDisplayName(c.target) or (#choices>0 and "Choose a replacement" or "No eligible replacement"))
     u.correctionTargetDropdown:SetEnabled(#choices>0)
     u.correctionTargetDropdown.dropdownArrow:SetEnabled(#choices>0)
     u.correctionEligibility:SetText(target and self:EligibilityText(item,c.target) or "")
@@ -1138,7 +1164,7 @@ function A:RenderVotingStatus()
     progress = progress or {eligible = 0, submitted = 0, abstained = 0}
     local timer = item.deadline and (" | " .. math.max(0, item.deadline - A.Client:ServerTime()) .. "s left") or ""
     local phase = "Responses: " .. item.status .. " | Voting: " .. item.voting .. timer
-    u.itemStatus:SetText(phase .. (item.winner and (" | Winner: " .. item.winner) or "") .. ((item.awardRevision or 1) > 1 and (" | Corrected " .. (item.awardRevision - 1) .. " time(s)") or ""))
+    u.itemStatus:SetText(phase .. (item.winner and (" | Winner: " .. self:FullDisplayName(item.winner)) or "") .. ((item.awardRevision or 1) > 1 and (" | Corrected " .. (item.awardRevision - 1) .. " time(s)") or ""))
     u.votingStatus:SetText(phase .. "\nResults: " .. (view.totals and "Visible to you" or "Concealed"))
     u.votingProgress:SetText(progress.submitted .. "/" .. progress.eligible .. " council voted | " .. ballotRules.limit .. " candidate(s) per voter")
     local names = {}
@@ -1253,26 +1279,23 @@ A.confirmationDialogs["NAUSERAIDTOOLS_DELETE_PROFILE"] = {
 SLASH_NAUSERAIDTOOLS1 = "/nrt"
 SlashCmdList["NAUSERAIDTOOLS"] = function(input)
     local command = (input or ""):lower():match("^%s*(.-)%s*$")
-    if command == "test" then A:StartDemo()
-    elseif command == "leave-test" then
-        A:LeaveTest()
-    elseif command == "diagnostics start" then A:StartDiagnostics()
-    elseif command == "diagnostics stop" then A.diagnosticRecording=false;A:ShowDiagnostics()
-    elseif command == "diagnostics" then A:ShowDiagnostics()
+    if command == "" then A:ShowLauncher()
     elseif command == "settings" then A:ShowSettings()
+    elseif command == "assignments" then A:ShowMyAssignments(false)
+    elseif command == "raidcheck" then A:ShowRaidChecks()
     elseif command == "responses" then A:ShowResponses()
-    elseif command == "history" then A:ShowHistory()
     elseif command == "loot" then A:ShowLootWindow("timer")
     elseif command == "timer" then A:ShowLootTimers()
-    elseif command == "sync" then A:RequestSync()
-    elseif command == "takeover" then A:TakeOverSession()
-    elseif command == "versions" or command == "version" then A:StartVersionCheck(true)
-    elseif command == "check" then if A:IsLootController() then A:StartAddonCheck(true) else A:StartVersionCheck(true) end
-    elseif command == "resume" then A:Render(); if A:RecoveryAvailable() then A:ShowConfirmation("NAUSERAIDTOOLS_RESUME") else A:Print("No saved session is available for this raid leader.") end
-    elseif command == "help" then A:Print("/nrt opens the window launcher; /nrt settings; /nrt responses; /nrt loot; /nrt timer (all roles); /nrt test; /nrt leave-test; /nrt history; /nrt sync; /nrt versions (all roles); /nrt check; /nrt resume; /nrt takeover; /nrt diagnostics.")
-    elseif command == "" then
-        A:ShowLauncher()
-    else A:Print("Unknown command. Use /nrt help; /nrt loot opens loot tracking.")
+    elseif command == "softres" then
+        local sr=A.SoftRes or NauseSoftReserve
+        if sr then local ok,why=sr:Show();if why then sr:Print(why) end;return ok end
+    elseif command == "history" then A:ShowHistory()
+    elseif command == "version" then A:StartVersionCheck(true)
+    elseif command == "help" then
+        A:Print("/nrt — main menu; /nrt settings; /nrt assignments — My Assignments; /nrt raidcheck; /nrt responses.")
+        A:Print("/nrt loot; /nrt timer; /nrt softres; /nrt history; /nrt version; /nrt help.")
+        A:Print("Use the windows for session actions. Tests, recovery and diagnostics are in Settings > Advanced.")
+    else A:Print("Unknown command. Use /nrt help for the available shortcuts.")
     end
 end
 

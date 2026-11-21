@@ -121,7 +121,7 @@ end
 
 function A:Send(packet,target,options)
     if self:IsSoloTest() or not self.Client:InGroup() then return false end
-    if not self.Client:InRaid() and self.state and not self.groupTest and packet.kind~="historySync" then return false end
+    if not self.Client:InRaid() and self.state and not self.groupTest and packet.kind~="historySync" and packet.kind~="raidAssignments" and packet.kind~="raidAssignments2" and packet.kind~="raidAssignments3" and packet.kind~="raidAssignments4" and packet.kind~="raidAssignments5" and packet.kind~="raidAssignments6" and packet.kind~="raidAssignments7" then return false end
     packet.protocol=PROTOCOL
     options=options or {}
     local priority=self:NetworkMessagePriority(packet,options)
@@ -169,7 +169,7 @@ function A:Send(packet,target,options)
     local bytes=0;for _,batch in ipairs(queue) do bytes=bytes+batch.bytes end
     if bytes-(previous and previous.bytes or 0)+size>2097152 then
         self.networkMetrics=self.networkMetrics or {};self.networkMetrics.overflows=(self.networkMetrics.overflows or 0)+1
-        self:Print("Network queue is full. This action was not queued; wait and use /nrt sync.");return false
+        self:Print("Network queue is full. This action was not queued; wait and use Settings > Advanced > Resynchronise.");return false
     end
     local batch=previous or {created=A.Client:Uptime()}
     batch.release=batch.release or options.release
@@ -215,14 +215,15 @@ end
 
 function A:PumpSender()
     if self:IsSoloTest() or not self.Client:InGroup() then queue={};return end
-    -- Target Forever restrictions still need native verification. Until then,
-    -- retain the existing combat pause, but never silently hold a response.
-    if A.Client:Combat() then
+    -- SoftRes synchronisation is addon data only. Let it reach the client API
+    -- during combat; its existing lockdown/throttle result handling retries
+    -- safely if the client refuses a send. Council responses keep their guard.
+    local combat=A.Client:Combat()
+    if combat then
         for i=#queue,1,-1 do if queue[i].op=="respond" then
             self:ClearPendingPersonalResponse(queue[i].responseRequest)
             table.remove(queue,i);self:Print("Response not sent: communications are paused in combat. Ask the master looter to reopen responses after combat.")
         end end
-        return
     end
     local now=A.Client:Uptime()
     if tokenTime then sendTokens=math.min(8,sendTokens+math.max(0,now-tokenTime)*refillRate) end
@@ -230,7 +231,9 @@ function A:PumpSender()
     if now+0.000001<nextSendAt or sendTokens+0.000001<1 then return end
     local selected
     for i,batch in ipairs(queue) do
-        if (not batch.retryAt or A.Client:Uptime()>=batch.retryAt) and (not selected or batch.priority<queue[selected].priority) then selected=i end
+        local softRes=batch.kind=="nrt-sr-experiment-6" or batch.kind=="nrt-sr-group-test-1"
+        if (not combat or softRes) and (not batch.retryAt or A.Client:Uptime()>=batch.retryAt)
+            and (not selected or batch.priority<queue[selected].priority) then selected=i end
     end
     if not selected then return end
     self:NetworkQueueStats()
@@ -279,7 +282,7 @@ function A:PumpSender()
         end
         nextSendAt=A.Client:Uptime()+sendInterval
         batch.retries=(batch.retries or 0)+1
-        if batch.retries>=20 then self:ClearPendingPersonalResponse(batch.responseRequest);table.remove(queue,selected);self:Print("A network message failed. Check the raid connection and use /nrt sync.") end
+        if batch.retries>=20 then self:ClearPendingPersonalResponse(batch.responseRequest);table.remove(queue,selected);self:Print("A network message failed. Check the raid connection and use Settings > Advanced > Resynchronise.") end
     end
 end
 
@@ -667,8 +670,9 @@ function A:Receive(prefix, message, channel, rawSender)
     local largeHistory=historyPeer and count<=365
     local recoveryPeer=channel=="WHISPER" and self.RecoveryTransportPeer and self:RecoveryTransportPeer(sender)
     local recoveryView=self.RecoveryViewPeer and self:RecoveryViewPeer(sender)
+    local assignmentPeer=self.AssignmentTransportPeer and self:AssignmentTransportPeer(sender)
     local largeMaster=sender~=self.leader and not recoveryView and count>8
-    if largeMaster and not largeHistory and not recoveryPeer and (not self.state or sender~=self.state.master or self.state.masterBlocked or count>48) then return end
+    if largeMaster and not assignmentPeer and not largeHistory and not recoveryPeer and (not self.state or sender~=self.state.master or self.state.masterBlocked or count>48) then return end
     local key = sender .. ":" .. id
     if completed[key] then return end
     local b = incoming[key]
@@ -696,7 +700,7 @@ function A:Receive(prefix, message, channel, rawSender)
         end
         if count>512 then completed[oldest]=nil end
         local payload=table.concat(b.parts)
-        local limit=(sender==self.leader or recoveryPeer or recoveryView) and 524288 or (largeHistory and 65536 or ((self.state and sender==self.state.master and not self.state.masterBlocked) and 8640 or 1440))
+        local limit=(sender==self.leader or recoveryPeer or recoveryView or assignmentPeer) and 524288 or (largeHistory and 65536 or ((self.state and sender==self.state.master and not self.state.masterBlocked) and 8640 or 1440))
         local expanded=true
         if payload:sub(1,1)=="l" then expanded,payload=pcall(self.ExpandWire,self,payload:sub(2),limit) end
         local ok,packet=false,nil
@@ -714,7 +718,8 @@ function A:Receive(prefix, message, channel, rawSender)
             local history=historyPeer and type(packet)=="table" and packet.kind=="historySync" and #payload<=65536
             local recovery=recoveryPeer and type(packet)=="table" and packet.kind=="recoveryState"
             local view=recoveryView and type(packet)=="table" and packet.kind=="view"
-            if not release and not native and not history and not recovery and not view then return end
+            local assignments=assignmentPeer and type(packet)=="table" and packet.kind=="raidAssignments7" and packet.op=="state" and #payload<=524288
+            if not release and not native and not history and not recovery and not view and not assignments then return end
         end
         if ok then self:Packet(sender, packet, channel) end
     end
@@ -745,7 +750,7 @@ frame:SetScript("OnEvent", function(_, event, ...)
         NauseRaidToolsDB.history = NauseRaidToolsDB.history or {}
         A:InitStorage()
         local ok,registered=A.Client:Call("C_ChatInfo.RegisterAddonMessagePrefix",PREFIX)
-        if not ok or registered==false then A:Print("Addon communication API unavailable. Use /nrt diagnostics; live communication is unconfirmed.") end
+        if not ok or registered==false then A:Print("Addon communication API unavailable. Use Settings > Advanced > Diagnostics; live communication is unconfirmed.") end
         A:RefreshRoster()
     elseif event == "CHAT_MSG_ADDON" then A:Receive(...)
     elseif event == "ITEM_DATA_LOAD_RESULT" or event == "GET_ITEM_INFO_RECEIVED" then

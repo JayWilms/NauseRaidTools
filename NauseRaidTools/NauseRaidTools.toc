@@ -1,9 +1,10 @@
 ## Interface: 16001
 ## Title: Nause Raid Tools
-## Notes: Loot council, loot tracking, trade timers and raid loot tools.
+## Notes: Loot Council, SoftRes, loot tracking, assignments and raid tools.
 ## Author: Joshua Wilmshurst
-## Version: 0.12.0-alpha.84
-## SavedVariables: NauseRaidToolsDB
+## Version: 0.12.0-alpha.108
+## SavedVariables: NauseRaidToolsDB, NauseSoftReserveDB
+## OptionalDeps: ItemDB, AtlasLootClassic, AtlasLootClassic_DungeonsAndRaids
 Core.lua
 Client.lua
 Voting.lua
@@ -31,8 +32,49 @@ TradeCompletion.lua
 LootUI.lua
 Warnings.lua
 VersionCheck.lua
+AutoInvite.lua
+RaidChecks.lua
+RaidChecksUI.lua
+RaidAssignments.lua
+RaidAssignmentsUI.lua
+RaidAssignmentBoard.lua
+BuffReminderClicks.lua
+BuffReminders.lua
 SettingsUI.lua
 CouncilUI.lua
 WindowLayouts.lua
 Diagnostics.lua
 UI.lua
+SoftRes/Bootstrap.lua
+SoftRes/vendor/LibDeflate.lua
+SoftRes/vendor/json.lua
+SoftRes/Model.lua
+SoftRes/Import.lua
+SoftRes/Runtime.lua
+SoftRes/ItemData.lua
+SoftRes/UIStyle.lua
+SoftRes/UIComponents.lua
+SoftRes/UI.lua
+SoftRes/RunMode.lua
+SoftRes/Browser.lua
+SoftRes/PugSetup.lua
+SoftRes/RollUI.lua
+SoftRes/AwardFlow.lua
+SoftRes/AwardUI.lua
+SoftRes/LeaderRollUI.lua
+SoftRes/Countdown.lua
+SoftRes/SharedLoot.lua
+SoftRes/SharedLootUI.lua
+SoftRes/SharedTimer.lua
+SoftRes/Windows.lua
+SoftRes/Sync.lua
+SoftRes/Refresh.lua
+SoftRes/Catalogue.lua
+SoftRes/Requests.lua
+SoftRes/Inventory.lua
+SoftRes/Delivery.lua
+SoftRes/Chat.lua
+SoftRes/TestMode.lua
+SoftRes/GroupTestMode.lua
+SoftRes/TestScenarios.lua
+SoftRes/HostCatalogue.lua

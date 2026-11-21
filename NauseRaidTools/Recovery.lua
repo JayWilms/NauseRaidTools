@@ -310,7 +310,7 @@ function A:TickRecovery()
     self.recoveryFailed = r.sid
     self.recovery = nil
     if not self.state then self.recoveryPending = nil end
-    self:Print("Automatic recovery could not verify the latest session. Use /nrt sync to retry.")
+    self:Print("Automatic recovery could not verify the latest session. Use Settings > Advanced > Resynchronise to retry.")
     if self.Render then self:Render() end
 end
 

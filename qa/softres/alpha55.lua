@@ -36,17 +36,18 @@ end
 patchEnvironment(env)
 a.ShowConfirmation=a.RealShowConfirmation
 local s={}
-for line in io.lines(companion.."/NauseSoftReserve/NauseSoftReserve.toc") do
-    if line:match("%.lua$") then assert(loadfile(companion.."/NauseSoftReserve/"..line,"t",env))("NauseSoftReserve",s) end
+for line in io.lines(companion.."/NauseRaidTools/NauseRaidTools.toc") do
+    if line:match("^SoftRes/.*%.lua$") then assert(loadfile(companion.."/NauseRaidTools/"..line,"t",env))("NauseRaidTools",a) end
 end
+s=a.SoftRes
 a:ShowSettings()
 local originalItemTools=a.ui.itemToolsButton:GetText()
 check(a.displayName=="Nause Raid Tools" and a.protocol==19,"wrong baseline")
 check(a.ui and a.ui.settingsHub,"baseline UI failed to construct")
-check(env.SlashCmdList.NAUSERAIDTOOLS~=nil and env.SLASH_NAUSESR1=="/nrtsr","command routing identity")
+check(env.SlashCmdList.NAUSERAIDTOOLS~=nil and env.SLASH_NAUSESR1==nil and env.SlashCmdList.NAUSESR==nil,"command routing identity")
 function a:ItemLibrary() return {GetInstances=function() return {{name="Ruins of Lordaeron"},{name="Hall of Thanes"}} end,GetSources=function() return {{instance="Ruins of Lordaeron"}} end,Search=function() return {} end} end
 local slash=env.SlashCmdList.NAUSERAIDTOOLS
-slash("pugsetup")
+slash("softres")
 check(s.setup and s.setup.TitleText and s.setup.nrtChrome,"initial SR Setup lacks shared title chrome")
 check(s.setup.lockButton and s.setup.collapseButton and s.setup.closeButton,"title controls missing")
 s.setupSelection={["Ruins of Lordaeron"]=true};s.setup.limit:SetText("2");assert(s:ConfirmPugSetup())
@@ -56,7 +57,7 @@ check(not s.ui,"legacy crowded management was constructed")
 assert(s:Reserve(s.session,a.me,{279259,279259},"in-game"))
 assert(s:Reserve(s.session,"Raider-Realm",{279259},"in-game"))
 assert(s:Command("lock"))
-slash("results")
+s:ShowResults()
 check(s.leaderRollUI.nrtChrome and s.leaderRollUI.input:GetBackdrop(),"Results lacks shared frame/input styling")
 assert(s:Command("roll 279259"))
 check(not s.sessionSetup.lock:IsEnabled(),"reservation lock remained enabled mid roll")
@@ -84,14 +85,14 @@ check(p.window:IsShown() and p.rows[1].action:GetText()=="Trade to Leader","shar
 check(p.rows[1].tradeLabel:GetText()=="Already held","self-held state lost")
 for i=2,21 do assert(s:CollectPugLoot(a.me,{sid=s.session.id,seq=i,sampledAt=env.GetServerTime(),entries={{guid="Item-modern-"..i,link=link,kind="timed",seconds=3600}}})) end
 p.window:SetSize(680,300);a:RenderLootWindows()
-check(p.visibleRows==3 and p.count==21 and not p.rows[4]:IsShown(),"Loot uses fixed six rows after resize")
-a:MoveLootPage(1);check(p.page==1 and p.rows[1].tracked==4,"resized paging skipped/wrong item")
+check(p.visibleRows==3 and p.count==21 and p.rows[21]:IsShown() and p.child:GetHeight()==21*44,"Loot uses fixed six rows after resize")
+a:MoveLootPage(1);check(p.scroll:GetVerticalScroll()==132 and p.rows[4].tracked==4,"resized paging skipped/wrong item")
 local revision=s.session.revision
 p.window._scripts.OnMouseWheel(p.window,-1)
-check(p.page==2 and p.rows[1].tracked==7 and s.session.revision==revision,"wheel changed SR state")
+check(p.scroll:GetVerticalScroll()==176 and p.rows[5].tracked==5 and s.session.revision==revision,"wheel changed SR state")
 s.selectedPugLoot=1;a:ShowLootManagement()
 check(p.manage:IsShown() and not p.window:IsShown(),"Manage did not close Loot")
-check(p.queue:GetText()=="Roll item" and p.attach:GetText()=="Archive delivered" and p.srAuto:IsShown(),"PuG Manage actions missing")
+check(p.queue:GetText()=="Roll item" and p.attach:GetText()=="Archive delivered" and p.srAuto:IsShown(),"SoftRes Manage actions missing")
 check(not p.reopen:IsShown() and not p.holder:IsShown(),"Guild-only controls leaked into PuG")
 check(a.ui.itemToolsButton:GetText()=="Add item","manual fallback not routed to Results")
 slash("timer");local timer=a.ui.lootTimers
@@ -142,9 +143,10 @@ assert(s:Command("roll 279259"));s:FlushSync()
 local peerBase,peerEnv=client("Raider-Realm");patchEnvironment(peerEnv)
 peerBase.ShowConfirmation=peerBase.RealShowConfirmation
 local peer={}
-for line in io.lines(companion.."/NauseSoftReserve/NauseSoftReserve.toc") do
-    if line:match("%.lua$") then assert(loadfile(companion.."/NauseSoftReserve/"..line,"t",peerEnv))("NauseSoftReserve",peer) end
+for line in io.lines(companion.."/NauseRaidTools/NauseRaidTools.toc") do
+    if line:match("^SoftRes/.*%.lua$") then assert(loadfile(companion.."/NauseRaidTools/"..line,"t",peerEnv))("NauseRaidTools",peerBase) end
 end
+peer=peerBase.SoftRes
 peerBase:ShowSettings()
 peerBase:Packet(a.me,{kind="nrt-sr-experiment-6",protocol=15,action="snapshot",data={state=a.Copy(s.session),sequence=s.streamSequence or 1}})
 check(not peer.session,"old protocol snapshot accepted")

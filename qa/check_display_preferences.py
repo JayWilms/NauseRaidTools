@@ -104,7 +104,7 @@ local u={popup=response,lootTimers={},lootPanels={deliveries={}},responseButtons
 A.ui=u;A.noteDraftKey='item:1'
 for _,key in ipairs({'responseProgress','popupItem','popupStatus','popupFacts','popupEligibility','responseBar',
     'note','noteBytes','responseNoteToggle','responseRail','responseRailPage','responseRailPrevious','responseRailNext',
-    'responsePrevious','responseNext','responseVoting','responseRoleHint'}) do u[key]=layoutWidget() end
+    'responseVoting','responseRoleHint'}) do u[key]=layoutWidget() end
 u.note.hint=layoutWidget()
 for i=1,9 do u.responseButtons[i]=layoutWidget() end
 for i=1,6 do u.responseItemButtons[i]=layoutWidget();u.responseItemButtons[i].icon=layoutWidget() end
@@ -112,13 +112,13 @@ function A:StyleButtonOutline() end
 A.responseNoteExpanded=true
 A:LayoutReadableWindow(response)
 assert(u.note.shown and u.responseNoteToggle.shown and u.responseNoteToggle.text=='Hide Note')
-assert(u.responseButtons[9].y+u.responseButtons[9].h<u.responseNext.y)
+assert(u.responseButtons[9].y+u.responseButtons[9].h<u.responseVoting.y)
 assert(58+u.responseRailNext.y+u.responseRailNext.h<response.h)
 u.note.text='My draft'
 A.responseNoteExpanded=nil;response.h=345
 A:LayoutReadableWindow(response)
 assert(not u.note.shown and not u.note.hint.shown and u.note.text=='My draft' and u.responseNoteToggle.text=='Edit Note')
-assert(u.responseButtons[9].y+u.responseButtons[9].h<u.responseNext.y)
+assert(u.responseButtons[9].y+u.responseButtons[9].h<u.responseVoting.y)
 
 -- Compact voting keeps the ballot controls aligned and restores the Full columns.
 local candidate=layoutWidget()

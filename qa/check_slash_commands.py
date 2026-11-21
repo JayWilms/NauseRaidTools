@@ -24,7 +24,7 @@ function CreateFrame()
 end
 """)
 for line in toc.splitlines():
-    if line.endswith('.lua'):
+    if line.endswith('.lua') and not line.startswith('SoftRes/'):
         lua.execute((source / line).read_text(encoding='utf-8'), source.name, lua.globals().A)
 
 lua.execute("""
@@ -64,20 +64,20 @@ local slash=function(input) return command("/nrt "..input) end
 A:RefreshRoster()
 assert(A.gameLeader==false)
 for attempt=1,2 do
-    slash('test')
+    A:StartDemo()
     assert(A:IsSoloTest() and A.state.master==player)
     assert(A.state.responseDuration==60 and #A.state.trackedLoot>0)
 end
-slash('leave-test')
+A:LeaveTest()
 assert(not A.demo and not A.state)
 
 grouped=true
 for attempt=1,2 do
-    slash('test')
+    A:StartDemo()
     assert(A.groupTest and A.state.groupTest and A.state.master==player)
     assert(A.state.responseDuration==60 and #A.state.trackedLoot>0)
 end
-slash('leave-test')
+A:LeaveTest()
 assert(not A.demo and not A.state)
 
 slash('')

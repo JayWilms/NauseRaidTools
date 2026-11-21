@@ -35,9 +35,8 @@ end
 
 function A:MoveVotingRail(direction)
     if not self.ui or not self:CanViewCouncil() then return end
-    local pages=math.max(1,math.ceil((self.state and #self.state.items or 0)/(self.votingItemRows or 9)))
-    self.itemPage=math.max(0,math.min((self.itemPage or 0)+direction,pages-1))
-    self:Render()
+    self:ScrollLootList(self.ui.votingItemRail,direction*43)
+
 end
 
 function A:CycleCouncilItem(direction)
@@ -173,12 +172,14 @@ function A:BuildCouncilUI(u, window, text, button)
     u.councilResponseBar:SetStatusBarTexture("Interface/TargetingFrame/UI-StatusBar")
     u.councilCountdown = u.councilResponseBar:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall")
     u.councilCountdown:SetPoint("CENTER")
-    u.votingItemRail=CreateFrame("Frame",nil,f)
-    u.votingItemRail:SetPoint("TOPLEFT",10,-66);u.votingItemRail:SetSize(60,9*43)
-    local function wheel(_,delta) if delta~=0 then A:MoveVotingRail(delta>0 and -1 or 1) end end
+    u.votingItemRail=self:CreateScrollFrame(f)
+    u.votingItemRail:SetPoint("TOPLEFT",10,-66);u.votingItemRail:SetSize(45,9*43)
+    u.votingItemChild=CreateFrame("Frame",nil,u.votingItemRail)
+    u.votingItemChild:SetSize(45,1);u.votingItemRail:SetScrollChild(u.votingItemChild)
+    local function wheel(_,delta) A:ScrollLootList(u.votingItemRail,-delta*43) end
     u.votingItemRail:EnableMouseWheel(true);u.votingItemRail:SetScript("OnMouseWheel",wheel)
     for i, b in ipairs(u.itemButtons) do
-        move(b, u.votingItemRail, 5, (i-1)*43, 38, 38)
+        move(b, u.votingItemChild, 5, (i-1)*43, 38, 38)
         b:EnableMouseWheel(true);b:SetScript("OnMouseWheel",wheel)
         b:SetNormalTexture(""); b:SetPushedTexture("")
         self:StylePanel(b)
@@ -251,8 +252,6 @@ function A:BuildCouncilUI(u, window, text, button)
     end
     u.playerPagePrevious,u.playerPageNext=u.candidatePrev,u.candidateNext
     u.playerPagePrevious:SetText("Players <");u.playerPageNext:SetText("Players >")
-    u.candidatePrev=button(f,"Previous",80,-463,85,function() A:CycleCouncilItem(-1) end)
-    u.candidateNext=button(f,"Next",690,-463,85,function() A:CycleCouncilItem(1) end)
     move(u.selection,f,125,469,375); move(u.playerHistory,f,510,463,110); u.compareGear:Hide()
     u.playerHistoryTitle:Hide(); for _, row in ipairs(u.playerHistoryRows) do row:Hide() end
     u.votingResponses=button(f,"My Responses",635,-580,125,function() A:ShowResponses() end)

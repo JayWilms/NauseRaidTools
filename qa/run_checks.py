@@ -11,6 +11,7 @@ checks = [
     'check_corpse_transport.py',
     'check_corpse_routes.py',
     'check_timer_scroll.py',
+    'check_lc_scroll.py',
     'check_trade_timers.py',
     'check_raid_member_pickers.py',
     'check_raid_setup.py',
@@ -32,7 +33,12 @@ checks = [
     'check_slash_commands.py',
     'check_manual_loot_links.py',
     'check_softres.py',
+    'check_unified_addon.py',
     'check_versions.py',
+    'check_raid_checks.py',
+    'check_assignments.py',
+    'check_auto_invite.py',
+    'check_buff_reminders.py',
 ]
 for name in checks:
     result = subprocess.run([sys.executable, str(root / 'qa' / name)], cwd=root, capture_output=True, text=True)

@@ -49,10 +49,9 @@ end
 function A:MoveLootPage(direction)
     if not self.ui or not self.ui.lootPanels or not self:CanViewLoot() then return end
     local panel=self.ui.lootPanels.deliveries
-    local last=math.max(0,math.ceil((panel.count or 0)/(panel.visibleRows or 6))-1)
-    panel.page=math.max(0,math.min((panel.page or 0)+direction,last))
-    if GameTooltip then GameTooltip:Hide() end
-    self:RenderLootWindows()
+    self:ScrollLootList(panel.scroll,direction*(panel.visibleRows or 6)*44)
+    panel.page=math.floor((panel.scroll:GetVerticalScroll() or 0)/((panel.visibleRows or 6)*44))
+
 end
 
 function A:BuildLootUI(u, window, text, button, edit)
@@ -60,7 +59,7 @@ function A:BuildLootUI(u, window, text, button, edit)
     u.lootPanels = {timer = panel, deliveries = panel}
     local w = window("NauseRaidToolsTrade", "Nause Raid Tools - Loot", 820, 440)
     panel.window = w
-    local function wheel(_,delta) if delta~=0 then A:MoveLootPage(delta>0 and -1 or 1) end end
+    local function wheel(_,delta) A:ScrollLootList(panel.scroll,-delta*44) end
     w.nrtWheelEnabled=true;w:EnableMouseWheel(true);w:SetScript("OnMouseWheel",wheel)
     panel.summary = text(w, "", 11, 20, -43, 710)
     panel.empty=text(w,"No loot collected yet.\nEligible items will appear here when holders report them.",13,45,-170,670)
@@ -68,9 +67,12 @@ function A:BuildLootUI(u, window, text, button, edit)
     panel.itemHeader=text(w, "Item", 11, 24, -70, 265)
     panel.holderHeader=text(w, "Holder", 11, 380, -70, 105)
     panel.actionHeader=text(w, "Next action", 11, 508, -70, 215)
+    panel.scroll=self:CreateScrollFrame(w)
+    panel.scroll:SetPoint("TOPLEFT",18,-88);panel.scroll:SetSize(762,264)
+    panel.child=CreateFrame("Frame",nil,panel.scroll);panel.child:SetSize(762,1);panel.scroll:SetScrollChild(panel.child)
     panel.rows = {}
-    for i=1,12 do
-        local row = button(w, "", 18, -88-(i-1)*44, 724, function(self,mouse)
+    for i=1,80 do
+        local row = button(panel.child, "", 0, -(i-1)*44, 724, function(self,mouse)
             if mouse=="RightButton" then
                 if A:IsMaster() and A:LootSuggestion(A:TrackedByID(self.tracked)) then
                     A:OpenLootSuggestionMenu(self,"dismissLootSuggestion","Dismiss Suggestion")
@@ -92,31 +94,6 @@ function A:BuildLootUI(u, window, text, button, edit)
         row.deadline=text(row,"",9,490,-25,125);row.deadline:SetMaxLines(1)
         row.trade=button(row,"",624,-8,88,function() end)
         row.tradeLabel=text(row.trade,"Trade",11,0,-6,88); row.tradeLabel:SetJustifyH("CENTER"); row.trade:GetFontString():Hide()
-        row:SetScript("OnEnter",function(self)
-            local entry=A.state and A:TrackedByID(self.tracked or 0)
-            if entry then
-                A:SetHoveredItem(self, entry.link)
-                local suggestion=A:LootSuggestion(entry)
-                if suggestion and A:IsMaster() then
-                    local names={}
-                    for name in pairs(suggestion.members) do names[#names+1]=name end
-                    table.sort(names)
-                    GameTooltip:AddLine("Suggested by "..table.concat(names,", "),1,0.8,0.4,true)
-                    GameTooltip:AddLine("Right-click to dismiss this suggestion.",1,1,1)
-                end
-                local _,status=A:LootHolderInfo(entry.holder)
-                GameTooltip:AddLine("Holder: "..(entry.holder or "Unknown"),1,1,1)
-                if status then GameTooltip:AddLine(status,1,0.7,0.3) end
-                local item=entry.item and A:ItemByID(entry.item)
-                local count=item and item.winner and A:PendingTradeCount(item.winner,entry.holder) or 0
-                if count>0 then
-                    GameTooltip:AddLine(count.." pending item(s) for "..item.winner.." from this holder. Up to six free normal trade slots can be filled; any remaining items stay pending.",1,1,1,true)
-                end
-                GameTooltip:AddLine("Open Timer for the full countdown.",1,0.8,0.4,true)
-                GameTooltip:Show()
-            end
-        end)
-        row:SetScript("OnLeave",function() GameTooltip:Hide() end)
         for _,surface in ipairs({row,row.trade}) do
             surface:EnableMouseWheel(true);surface:SetScript("OnMouseWheel",wheel)
         end
@@ -163,10 +140,10 @@ function A:ReviewDelivery(op, target)
     if op == "lootHolder" then
         data.target = self:Resolve(target)
         if not data.target then self:Print("Enter an unambiguous current raid member."); return end
-        message = "Change the recorded holder from " .. entry.holder .. " to " .. data.target .. "?\nThis changes tracking only and clears the old timer reading."
+        message = "Change the recorded holder from " .. self:FullDisplayName(entry.holder) .. " to " .. self:FullDisplayName(data.target) .. "?\nThis changes tracking only and clears the old timer reading."
     elseif not item or not item.winner then return
-    elseif op == "confirmDelivery" then message = "Confirm that " .. item.winner .. " actually received this item?\nThis records your manual confirmation; it does not perform a trade."
-    else message = "Reopen delivery to " .. item.winner .. "?\nThe earlier confirmation stays in the delivery log. This does not move the item." end
+    elseif op == "confirmDelivery" then message = "Confirm that " .. self:FullDisplayName(item.winner) .. " actually received this item?\nThis records your manual confirmation; it does not perform a trade."
+    else message = "Reopen delivery to " .. self:FullDisplayName(item.winner) .. "?\nThe earlier confirmation stays in the delivery log. This does not move the item." end
     if self.demo then message = self:TestLabel().." - simulated change only.\n\n" .. message end
     local dialog = A:ShowConfirmation("NAUSERAIDTOOLS_DELIVERY", entry.link, message)
     if dialog then dialog.data = data end
@@ -185,7 +162,7 @@ function A:RenderLootWindows()
         panel.window:Hide(); panel.manage:Hide(); return
     end
     local s=self.state
-    if panel.discoverySID~=s.id then panel.discoverySID=s.id;panel.discoveryID=0;panel.page=0 end
+    if panel.discoverySID~=s.id then panel.discoverySID=s.id;panel.discoveryID=0;panel.page=0;panel.scroll:SetVerticalScroll(0) end
     local newest=panel.discoveryID or 0
     for _,entry in ipairs(s.trackedLoot or {}) do
         if not self:IsCompletedUtilityAssignment(entry) then newest=math.max(newest,entry.id) end
@@ -224,9 +201,9 @@ function A:RenderLootWindows()
     panel.summary:SetText((self.demo and (self:TestLabel().." | ") or "").."Needs attention: "..attention..
         " | Tracked: "..#rows..(completedAssignments>0 and (" | "..completedAssignments.." automatic deliveries in History") or "")..
         capacity.." | "..(s.archivedCount or 0).." archived")
-    if self.demo then panel.empty:SetText("No simulated loot.\nRun /nrt test to prepare a fresh Forever loot set.") end
+    if self.demo then panel.empty:SetText("No simulated loot.\nRun Settings > Advanced > Loot Council Test to prepare a fresh Forever loot set.") end
     for i,row in ipairs(panel.rows) do
-        local work=i<=(panel.visibleRows or 6) and rows[panel.page*(panel.visibleRows or 6)+i] or nil
+        local work=rows[i]
         local entry=work and work.entry
         row:SetShown(entry~=nil);row.tracked=entry and entry.id
         if entry then
@@ -286,7 +263,7 @@ function A:RenderLootWindows()
     panel.queueAll:SetEnabled(master and not s.masterBlocked and unqueued>0 and #s.items+unqueued<=40)
     panel.selectionIcon:SetShown(entry~=nil)
     if entry then panel.selectionIcon:SetTexture(self:ItemIcon(entry)) end
-    panel.selection:SetText(entry and (entry.link.." | Holder: "..(entry.holder~="" and entry.holder or "Unknown").." | "..(entry.delivery or "Unawarded").."\n"..(entry.delivery=="review" and "Award changed after delivery: arrange transfer and confirm again." or "Confirm delivery after the recipient receives the item.")) or "Select an item in Loot / Trade first.")
+    panel.selection:SetText(entry and (entry.link.." | Holder: "..(entry.holder~="" and self:FullDisplayName(entry.holder) or "Unknown").." | "..(entry.delivery or "Unawarded").."\n"..(entry.delivery=="review" and "Award changed after delivery: arrange transfer and confirm again." or "Confirm delivery after the recipient receives the item.")) or "Select an item in Loot / Trade first.")
     panel.queue:SetEnabled(master and entry and self:CanQueueTrackedLoot(entry))
     local selected=self:ItemByID(self.selectedItem or 0)
     panel.attach:SetEnabled(master and entry and self:CanQueueTrackedLoot(entry) and selected and not selected.lootGUID and selected.link==entry.link)
@@ -294,11 +271,9 @@ function A:RenderLootWindows()
     panel.reopen:SetEnabled(master and entry and (entry.delivery=="delivered" or entry.delivery=="review"))
     panel.setHolder:SetEnabled(master and entry~=nil)
     panel.auto:SetEnabled(self:IsLeader());self:SetSettingsToggle(panel.auto,s.autoCollect~=false)
-    panel.previous:SetEnabled(panel.page>0)
-    panel.next:SetEnabled((panel.page+1)*(panel.visibleRows or 6)<#rows)
-    self:RefreshRailArrow(panel.previous);self:RefreshRailArrow(panel.next)
-    local pages=math.max(1,math.ceil(#rows/(panel.visibleRows or 6)))
-    panel.pageLabel:SetText(panel.pageLabel:GetWidth()<80 and ((panel.page+1).."/"..pages) or ("Page "..(panel.page+1).." / "..pages))
+    panel.previous:Hide();panel.next:Hide();panel.pageLabel:Hide()
+    self:SizeLootScroll(panel.scroll,panel.child,#rows,44)
+
 end
 
 -- Timer keeps exact countdowns, with delivery actions limited to the item holder.
